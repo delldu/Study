@@ -86,6 +86,9 @@ for tk in result:
 print('='*40)
 print('6. 中英混合 时间识别')
 print('-'*40)
-words = jieba.posseg.cut("杜耀宏写的测试程序:2018年12月1日,正月初五买200斤大米,元宵节在天虹商场买汤圆2斤,中秋节在布吉镇买月饼10盒,Hello Word!明天下午1点在北京饭店吃饭.")
+s = "杜耀宏写的测试程序:2018年12月1日,正月初五买200斤大米,元宵节在天虹商场买汤圆2斤,中秋节在布吉镇买月饼10盒,Hello Word!明天下午1点在北京饭店吃饭."
+seg_list = jieba.cut(s, cut_all=False)
+print("Default Mode: " + "/ ".join(seg_list))
+words = jieba.posseg.cut(s)
 for word, flag in words:
     print('%s %s' % (word, flag))
