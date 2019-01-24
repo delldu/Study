@@ -1,0 +1,19 @@
+
+echo_pcd_header()
+{
+	echo "# .PCD v.7 - Point Cloud Data file format"
+	echo "VERSION .7"
+	echo "FIELDS x y z"
+	echo "WIDTH $1"
+	echo "HEIGHT 1"
+	echo "VIEWPOINT 0 0 0 1 0 0 0"
+	echo "POINTS $1"
+	echo "DATA ascii"
+}
+
+LINES=`cat $1 | wc -l`
+
+echo_pcd_header $LINES > /tmp/pcl.pcd
+cat $1 >> /tmp/pcl.pcd
+pcl_viewer /tmp/pcl.pcd
+
