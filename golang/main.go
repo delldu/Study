@@ -1,0 +1,87 @@
+/************************************************************************************
+***
+***	Copyright 2019 Dell(18588220928@163.com), All Rights Reserved.
+***
+***	File Author: Dell, 2019-08-08 23:02:07
+***
+************************************************************************************/
+
+package main
+
+import (
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"text/template"
+)
+
+var (
+	help  bool
+	fname string
+	value string
+)
+
+func init() {
+	flag.BoolVar(&help, "h", false, "Display this help")
+	flag.StringVar(&fname, "f", "", "Template file name")
+	flag.StringVar(&value, "v", "", "Current value")
+
+	flag.Usage = usage
+}
+
+func usage() {
+	const version = "1.0"
+
+	fmt.Println("create_from_template version:", version)
+	fmt.Println("Usage: create_from_template [-f file] [-v value] [-h]")
+	fmt.Println("Options:")
+
+	//      flag.PrintDefaults() format is not good enough !
+	fmt.Println("    -h                   Display this help")
+	fmt.Println("    -f file              Template file name")
+	fmt.Println("    -v value             Current value")
+}
+
+func checkerror(err error) {
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func runcmd(cmdline string) string {
+	cmd := exec.Command("/bin/bash", "-c", cmdline)
+	out, err := cmd.Output()
+	checkerror(err)
+
+	return string(out)
+}
+
+func main() {
+	flag.Parse()
+
+	if len(fname) > 0 {
+		log.Println(fname)
+		log.Println(value)
+
+		b, e := ioutil.ReadFile(fname)
+		checkerror(e)
+		text := string(b)
+
+		funcMap := template.FuncMap{"bash": runcmd}
+
+		// Template name
+		tname := filepath.Base(fname)
+
+		t, e := template.New(tname).Funcs(funcMap).Parse(text)
+		checkerror(e)
+
+		e = t.Execute(os.Stdout, value)
+		return
+	}
+
+	usage()
+}
