@@ -2,6 +2,7 @@ import pdb
 import time
 from tqdm import tqdm
 
+
 import torch
 model = torch.hub.load('pytorch/vision', 'deeplabv3_resnet101', pretrained=True)
 model.eval()
@@ -15,6 +16,8 @@ except: urllib.request.urlretrieve(url, filename)
 # sample execution (requires torchvision)
 from PIL import Image
 from torchvision import transforms
+#input_image = Image.open(filename)
+filename="small_dog.jpg"
 input_image = Image.open(filename)
 input_image.show()
 
@@ -31,11 +34,15 @@ if torch.cuda.is_available():
     input_batch = input_batch.to('cuda')
     model.to('cuda')
 
+model.eval()
 start = time.time()
-for i in tqdm(range(10)):
+
+for i in tqdm(range(100)):
     with torch.no_grad():
         output = model(input_batch)['out'][0]
+    
 print("Speend time: {}".format(time.time() - start))
+
 
 output_predictions = output.argmax(0)
 
