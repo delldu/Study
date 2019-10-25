@@ -6,12 +6,13 @@ def basic():
     #roberta = torch.hub.load('pytorch/fairseq', 'roberta.large')
     roberta = torch.hub.load('pytorch/fairseq', 'roberta.large')
     roberta.eval()  # disable dropout (or leave in train mode to finetune)
-    pdb.set_trace()
 
     print("roberta.large model:", roberta)
 
     tokens = roberta.encode('Hello world!')
     print(roberta.decode(tokens))
+
+    pdb.set_trace()
 
     # (Pdb) pp tokens
     # tensor([    0, 31414,   232,   328,     2])
@@ -33,7 +34,6 @@ basic()
 roberta = torch.hub.load('pytorch/fairseq', 'roberta.large.mnli')
 roberta.eval()  # disable dropout for evaluation
 print("roberta.large.mnli model:", roberta)
-pdb.set_trace()
 
 with torch.no_grad():
     # Encode a pair of sentences and make a prediction
