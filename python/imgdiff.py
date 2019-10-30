@@ -27,7 +27,7 @@ def diff(args):
     diff_img = ImageChops.difference(im1, im2)
 
     r_cnt, g_cnt, b_cnt = 0, 0, 0
-    r_psnr, g_psnr, b_psnr = 0, 0, 0
+    r_psnr, g_psnr, b_psnr = 0.000001, 0.000001, 0.000001
     for y in range(diff_img.height):
         for x in range(diff_img.width):
             if args.mode == "RGBA":
@@ -57,10 +57,6 @@ def diff(args):
             else:
                 diff_img.putpixel((x, y), (r, g, b))
 
-    r_cnt = r_cnt / (diff_img.width * diff_img.height)
-    g_cnt = g_cnt / (diff_img.width * diff_img.height)
-    b_cnt = b_cnt / (diff_img.width * diff_img.height)
-
     r_psnr = r_psnr / (diff_img.width * diff_img.height)
     g_psnr = g_psnr / (diff_img.width * diff_img.height)
     b_psnr = b_psnr / (diff_img.width * diff_img.height)
@@ -70,6 +66,12 @@ def diff(args):
 
     print("Threshold:", args.threshold)
     print("Count: ", "R = ", r_cnt, ", G = ", g_cnt, ", B = ", b_cnt)
+
+    r_cnt = r_cnt / (diff_img.width * diff_img.height)
+    g_cnt = g_cnt / (diff_img.width * diff_img.height)
+    b_cnt = b_cnt / (diff_img.width * diff_img.height)
+    print("Count Ratio:", "R = ", r_cnt, ", G = ", g_cnt, ", B = ", b_cnt)
+
     print("PSNR : ", "R = ", r_psnr, ", G = ", g_psnr, ", B = ", b_psnr)
 
     if "." not in args.output:
@@ -90,8 +92,8 @@ def diff(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Compare two images')
-    parser.add_argument("-f", "--first", help="first image", required=True)
-    parser.add_argument("-s", "--second", help="second image", required=True)
+    parser.add_argument("-a", "--first", help="first image", required=True)
+    parser.add_argument("-b", "--second", help="second image", required=True)
     parser.add_argument("-o",
                         "--output",
                         help="output image, defaut: output.png",
@@ -99,14 +101,14 @@ if __name__ == '__main__':
                         default="output.png")
     parser.add_argument("-t",
                         "--threshold",
-                        help="Threshold, default: 10",
-                        type=int,
-                        default=10)
+                        help="Threshold, default: 64.0",
+                        type=float,
+                        default=64.0)
     parser.add_argument("-m",
                         "--mode",
-                        help="color mode, default: RGBA",
+                        help="color mode, default: RGB, option RGBA",
                         type=str,
-                        default="RGBA")
+                        default="RGB")
     args = parser.parse_args()
 
     diff(args)
