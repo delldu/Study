@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,16 +58,13 @@ func runcmd(cmdline string) string {
 	out, err := cmd.Output()
 	checkerror(err)
 
-	return string(out)
+	return strings.Trim(string(out), "\n")
 }
 
 func main() {
 	flag.Parse()
 
 	if len(fname) > 0 {
-		log.Println(fname)
-		log.Println(value)
-
 		b, e := ioutil.ReadFile(fname)
 		checkerror(e)
 		text := string(b)
@@ -80,8 +78,7 @@ func main() {
 		checkerror(e)
 
 		e = t.Execute(os.Stdout, value)
-		return
+	} else {
+		usage()
 	}
-
-	usage()
 }
