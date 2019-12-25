@@ -175,3 +175,5 @@ https://github.com/delldu/vision.ai
 
 https://github.com/delldu/fairseq-zh-en
 
+Paper List:
+HarDNet: A Low Memory Traffic Network
