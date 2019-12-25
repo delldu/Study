@@ -175,5 +175,7 @@ https://github.com/delldu/vision.ai
 
 https://github.com/delldu/fairseq-zh-en
 
+
+https://github.com/delldu/segmentation_models.pytorch
 Paper List:
 HarDNet: A Low Memory Traffic Network
