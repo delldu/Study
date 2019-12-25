@@ -167,6 +167,7 @@ https://github.com/delldu/VESPCN
 https://github.com/delldu/SRResNet
 
 https://github.com/delldu/STN
+https://github.com/delldu/Aster
 
 https://github.com/delldu/NeuralCF
 
