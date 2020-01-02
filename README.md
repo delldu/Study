@@ -188,3 +188,5 @@ https://github.com/delldu/Lookahead.git
 
 Paper List:
 HarDNet: A Low Memory Traffic Network
+https://github.com/CoinCheung/pytorch-loss.git
+
