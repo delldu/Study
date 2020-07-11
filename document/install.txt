@@ -1,0 +1,109 @@
+Install Guide
+
+1. change apt source: aliyun
+
+2. nvidia:
+	2.1 --driver
+	Driver Version: 440.100      CUDA Version: 10.2, install from GUI of "software & updater"
+
+	2.2 --cuda toolkits
+	nvidia cuda toolkit: sudo bash cuda_10.2.89_440.33.01_linux.run, "DONOT install driver !"
+
+	2.3 --tensorrt
+		1) pip install pycuda
+		2) install_tensor.sh
+
+3. apt applications:
+	3.1 --ffmpeg, vlc
+	sudo apt install ffmpeg vlc 
+
+	3.2 --typora
+	wget -qO - https://typora.io/linux/public-key.asc | sudo apt-key add -
+	sudo add-apt-repository 'deb https://typora.io/linux ./'
+	sudo apt-get update
+	sudo apt-get install typora
+
+
+4. dpkg applications:
+	4.1 --google-chrome
+	sudo dpkg -i google-chrome-stable_current_amd64.deb  sublime-text_build-3210_amd64.deb
+
+	4.2 --baidunetdisk
+	sudo dpkg -i baidunetdisk_linux_3.0.1.2.deb
+
+	4.3 --sumlime
+	sudo dpkg -i sublime-text_build-3210_amd64.deb
+
+	4.4 --vscode
+	sudo dpkg -i vscode_1.46.1-1592428892_amd64.deb
+
+	4.5 --wps
+	sudo dpkg -i wps-office_11.1.0.9522_amd64.deb
+
+
+5. snap applicatoons:
+	sudo snap connect xxx-application:removable-media
+	5.1 --gimp 2.10.20
+	sudo snap install gimp
+	sudo snap connect gimp:removeable-media
+	
+	5.2 --blender 2.83.2
+	sudo snap install blender --classic
+
+	5.3 --natron
+	sudo snap install natron --classic
+	sudo snap connect natron:removable-media
+
+
+6. deep learning:
+	6.1 -- docker environment
+	docker, nvidia docker, pytorch/tensorflow images
+
+	6.1.1 --docker 19.03.6,
+	sudo apt install docker.io
+
+	6.1.2 --nvidia docker
+	distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+	curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+	curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+	sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+	sudo systemctl restart docker
+
+	6.1.3 --pytorch docker images
+	sudo docker pull pytorch/pytorch
+	6.1.4 --tensorflow docker images
+	# sudo docker pull tensorflow/tensorflow
+	sudo docker pull nvcr.io/nvidia/tensorflow:20.02-tf2-py3
+
+
+	6.2 -- miniconda docker (conda 4.8.3)
+	bash Miniconda3-latest-Linux-x86_64.sh
+	conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+	conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+	conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge 
+	conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/msys2/
+	conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/
+	conda config --set show_channel_urls yes
+	cat ~/.condarc
+	channels:
+	  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+	  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+	  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/
+	  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/msys2/
+	  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
+	  - defaults
+	show_channel_urls: true
+
+	6.2.1 --pytorch(1.5.1)
+	conda create --name pytorch
+	conda activate pytorch
+	conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+
+	6.2.2 --tensorflow(2.2.0)
+	conda create --nane tensorflow
+	conda activate tensorflow
+	conda install tesorflow-gpu
+	
+	test:
+	import tensorflow as tf
+	print(tf.test.is_gpu_available())
