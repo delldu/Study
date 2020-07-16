@@ -24,3 +24,18 @@ td
 	width: 512px;
 }
 
+.image_fg
+{
+	height: 512px;
+	width: 512px;
+	opacity: 0.9;
+}
+
+.image_bg
+{
+	height: 512px;
+	width: 512px;
+	opacity: 0.9;
+	background-repeat: no-repeat;
+	background-size: contain;
+}
