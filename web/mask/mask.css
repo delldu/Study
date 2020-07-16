@@ -1,0 +1,26 @@
+table
+{
+	height: 1024px;
+	width: 1024px;
+	border-collapse: collapse;
+	border: none;
+}
+
+td
+{
+	height: 26px;
+	border: dashed #C0C0C0 1px;
+}
+
+.icon
+{
+	height: 64px;
+	width: 64px;
+}
+
+.image
+{
+	height: 512px;
+	width: 512px;
+}
+

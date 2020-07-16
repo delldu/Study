@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Mask Show</title>
+		<link href="mask.css" rel="stylesheet" type="text/css">
+		<script src="mask.js"></script>
+	</head>
+	<body>
+		<h1><img src="logo.png" class="icon" alt="Mind Source">Mask Show</h1>
+		<form name="form1" enctype="multipart/form-data" method="post" action="">
+			<table>
+				<tr>
+					<td>Source Image</td>
+					<td>Mask Image</td>
+				</tr>
+				<tr>
+					<td>
+						<div class="image" onClick="ChoseFile('source_file');">
+						<img class="image" id="source_canvas" src="" alt="Please choice source image">
+						<input type="file" id="source_file" name="source_file" accept="image/*" style="display:none" onChange="PreviewImage(this, 'source_canvas');" />
+						</div>
+					</td>
+					<td>
+						<div class="image" onClick="ChoseFile('mask_file');">
+						<img class="image" id="mask_canvas" src="" alt="Please choice mask image">
+						<input type="file" id="mask_file" name="mask_file" accept="image/*" style="display:none" onChange="PreviewImage(this, 'mask_canvas');" />
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td>Blend Image</td>
+					<td>Target Image</td>
+				</tr>
+				<tr>
+					<td>
+						<div class="image">
+						<img class="image" id="blend_canvas" src="" alt="Blend Image">
+						</div>
+					</td>
+					<td>
+						<div class="image" onClick="ChoseFile('target_file');">
+						<img  class="image" id="target_canvas" src="" alt="Please choice target image">
+						<input type="file" id="target_file" name="target_file" accept="image/*" style="display:none" onChange="PreviewImage(this, 'target_canvas');" />
+						</div>
+					</td>
+				</tr>
+			</table>
+		</form>
+	</body>
+</html>
