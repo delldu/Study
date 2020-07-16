@@ -2,23 +2,17 @@ import pdb
 import time
 from tqdm import tqdm
 
-
 import torch
-model = torch.hub.load('pytorch/vision', 'deeplabv3_resnet101', pretrained=True)
+model = torch.hub.load('pytorch/vision:v0.6.0', 'deeplabv3_resnet101', pretrained=True)
 model.eval()
 print(model)
-
-import urllib
-url, filename = ("https://github.com/pytorch/hub/raw/master/dog.jpg", "dog.jpg")
-try: urllib.URLopener().retrieve(url, filename)
-except: urllib.request.urlretrieve(url, filename)
 
 # sample execution (requires torchvision)
 from PIL import Image
 from torchvision import transforms
 #input_image = Image.open(filename)
-filename="small_dog.jpg"
-input_image = Image.open(filename)
+filename="dog.jpg"
+input_image = Image.open(filename).convert("RGB")
 input_image.show()
 
 preprocess = transforms.Compose([
