@@ -8,7 +8,7 @@
 	</head>
 	<body>
 		<h1><img src="logo.png" class="icon" alt="Mind Source">Mask Show</h1>
-		<form name="form1" enctype="multipart/form-data" method="post" action="">
+ 		<form name="form1" enctype="multipart/form-data" method="post" action="">
 			<table>
 				<tr>
 					<td>Source Image</td>
@@ -17,13 +17,13 @@
 				<tr>
 					<td>
 						<div class="image" onClick="ChoseFile('source_file');">
-						<img class="image" id="source_canvas" src="" alt="Please choice source image">
+						<img class="image" id="source_canvas" src="" alt="Please choice source image" onload="UpdateBlendCanvas();">
 						<input type="file" id="source_file" name="source_file" accept="image/*" style="display:none" onChange="PreviewImage(this, 'source_canvas');" />
 						</div>
 					</td>
 					<td>
 						<div class="image" onClick="ChoseFile('mask_file');">
-						<img class="image" id="mask_canvas" src="" alt="Please choice mask image">
+						<img class="image" id="mask_canvas" src="" alt="Please choice mask image" onload="UpdateBlendCanvas();">
 						<input type="file" id="mask_file" name="mask_file" accept="image/*" style="display:none" onChange="PreviewImage(this, 'mask_canvas');" />
 						</div>
 					</td>
@@ -33,8 +33,8 @@
 					<td>Target Image</td>
 				</tr>
 				<tr>
-					<td class="image_bg" id="blend_bg_canvas" background="mask.png">
-						<img class="image_fg" id="blend_fg_canvas" src="blendx.jpg" alt="Blend Image">
+					<td>
+						<canvas class="image" id="blend_canvas">Sorry, your browser does not support canvas ! </canvas>
  					</td>
 					<td>
 						<div class="image" onClick="ChoseFile('target_file');">

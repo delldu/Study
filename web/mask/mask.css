@@ -8,34 +8,18 @@ table
 
 td
 {
-	height: 26px;
+	height: 24px;
 	border: dashed #C0C0C0 1px;
 }
 
 .icon
 {
-	height: 64px;
-	width: 64px;
+	height: 32px;
+	width: 32px;
 }
 
 .image
 {
 	height: 512px;
 	width: 512px;
-}
-
-.image_fg
-{
-	height: 512px;
-	width: 512px;
-	opacity: 0.9;
-}
-
-.image_bg
-{
-	height: 512px;
-	width: 512px;
-	opacity: 0.9;
-	background-repeat: no-repeat;
-	background-size: contain;
 }
