@@ -10,8 +10,6 @@ https://github.com/delldu/PRStudy
 
 https://github.com/delldu/WDSR-pytorch
 
-https://github.com/delldu/FastDVDnet
-
 https://github.com/delldu/S3R
 
 https://github.com/delldu/edsr_4k
@@ -19,8 +17,6 @@ https://github.com/delldu/edsr_4k
 https://github.com/delldu/Noise2Noise
 
 https://github.com/delldu/Vision
-
-https://github.com/delldu/DeblurGANv2
 
 https://github.com/delldu/EDVR
 
@@ -190,3 +186,15 @@ HarDNet: A Low Memory Traffic Network
 
 https://github.com/CoinCheung/pytorch-loss.git
 
+Image Tools:
+https://github.com/delldu/ImageClear.git
+https://github.com/delldu/ImageColor.git
+https://github.com/delldu/ImagePatch.git
+https://github.com/delldu/ImageSharp.git
+https://github.com/delldu/ImageZoom.git
+
+Video Tools:
+https://github.com/delldu/VideoClean.git
+https://github.com/delldu/VideoColor.git
+https://github.com/delldu/VideoSlow.git
+https://github.com/delldu/VideoZoom.git
