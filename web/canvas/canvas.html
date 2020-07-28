@@ -2,65 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <!--
-        VGG Image Annotator (via)
-        www.robots.ox.ac.uk/~vgg/software/via/
+    <title>New Canvas</title>
+    <meta name="author" content="Dell Du">
 
-        Copyright (c) 2016-2018, Abhishek Dutta, Visual Geometry Group, Oxford University and VIA Contributors..
-        All rights reserved.
-
-        Redistribution and use in source and binary forms, with or without
-        modification, are permitted provided that the following conditions are met:
-
-        Redistributions of source code must retain the above copyright notice, this
-        list of conditions and the following disclaimer.
-        Redistributions in binary form must reproduce the above copyright notice,
-        this list of conditions and the following disclaimer in the documentation
-        and/or other materials provided with the distribution.
-        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-        AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-        IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-        ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-        LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-        CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-        SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-        INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-        CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-        ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-        POSSIBILITY OF SUCH DAMAGE.
-      -->
-    <title>VGG Image Annotator</title>
-    <meta name="author" content="Abhishek Dutta">
-    <meta name="description" content="VIA is a standalone image annotator application packaged as a single HTML file (< 400 KB) that runs on most modern web browsers.">
-
-    <!--
-    Development of VIA is supported by the EPSRC programme grant
-    Seebibyte: Visual Search for the Era of Big Data (EP/M013774/1).
-    Using Google Analytics, we record the usage of this application.
-    This data is used in reporting of this programme grant.
-
-    If you do not wish to share this data, you can safely remove the
-    javascript code below.
-    -->
-    <script type="text/javascript">
-      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-                               m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-                              })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-      ga('create', 'UA-20555581-2', 'auto');
-      ga('set', 'page', 'via-2.0.0.html');
-      ga('send', 'pageview');
-    </script>
-
-<!-- START: Contents of file: via.css-->
+<!-- BEGIN: Contents css-->
 <style>
-/* 
-  CSS style definitions for VIA 2.x.y
-  http://www.robots.ox.ac.uk/~vgg/software/via/
-  Author: Abhishek Dutta <adutta@robots.ox.ac.uk>
-  Date: moved from index.html to via.css on 13 June 2019
-*/
-
 body { min-width:200px; padding:0; margin:0; font-family:sans-serif; }
 * { box-sizing: border-box; }
 input[type=text] { border:1px solid #cccccc; margin:0.6rem 0; padding:0.2rem 0.4rem; }
@@ -103,11 +49,6 @@ textarea { border:1px solid #cccccc; margin:0.6rem 0; padding:0.2rem 0.4rem; }
 #image_panel canvas { position:absolute; top:0px; left:0px; outline:none;}
 #image_panel .visible { visibility:visible !important; opacity:1 !important; }
 #image_panel label>img { visibility:visible; opacity:1; position:relative; width:auto; height:4em; outline:none; }
-
-/* image buffer
-#image_panel .fadein { visibility:visible; opacity:1; transition: visibility 0s linear 0s, opacity 300ms; }
-#image_panel .fadeout { visibility:hidden; opacity:0; transition: visibility 0s linear 300ms, opacity 300ms; }
-*/
 
 /* image grid view */
 #image_grid_panel { position:relative; margin:0; padding:0; width:100%; }
@@ -273,7 +214,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 .force_small_font { font-size:small !important; }
 .key { font-family:monospace; padding:1px 6px; background:linear-gradient(to bottom,#f0f0f0,#fcfcfc);; border:1px solid #e0e0e0; white-space:nowrap; color:#303030; border-bottom-width:2px; border-radius:3px; font-size:1.2em; }
 </style>
-<!-- END: Contents of file: via.css-->
+<!-- END: Contents css-->
   </head>
 
   <body onload="nc_init()" onresize="nc_update_ui_components()">
@@ -446,12 +387,9 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             <ul>
               <li onclick="download_all_region_data('csv')" title="Export annotations to a CSV file">Export Annotations (as csv)</li>
               <li onclick="download_all_region_data('json')" title="Export annotaitons to a JSON file">Export Annotations (as json)</li>
-              <li onclick="download_all_region_data('coco', 'json')" title="Export annotaitons to COCO (http://cocodataset.org) format">Export Annotations (COCO format)</li>
               <li onclick="" class="submenu_divider"></li>
               <li onclick="sel_local_data_file('annotations')" title="Import annotations from a CSV file">Import Annotations (from csv)</li>
               <li onclick="sel_local_data_file('annotations')" title="Import annotations from a JSON file">Import Annotations (from json)</li>
-              <li onclick="sel_local_data_file('annotations_coco')" title="Import annotations from a COCO (http://cocodataset.org) formatted JSON file">Import Annotations (COCO format)</li>
-
               <li class="submenu_divider"></li>
               <li onclick="show_annotation_data()" title="Show a preview of annotations (opens in a new browser windows)">Preview Annotations</li>
               <li onclick="download_as_image()" title="Download an image containing the annotations">Download as Image</li>
@@ -759,11 +697,11 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
           <div class="row">
             <div class="variable">
               <div class="name">Default Path</div>
-              <div class="desc">If all images in your project are saved in a single folder, set the default path to the location of this folder. The VIA application will load images from this folder by default. Note: a default path of <code>"./"</code> indicates that the folder containing <code>via.html</code> application file also contains the images in this project. For example: <code>/datasets/VOC2012/JPEGImages/</code> or <code>C:\Documents\data\</code>&nbsp;<strong>(note the trailing <code>/</code> and <code>\</code></strong>)</div>
+              <div class="desc">If all images in your project are saved in a single folder, set the default path to the location of this folder. The VIA application will load images from this folder by default. Note: a default path of <code>"./"</code> indicates that the folder containing <code>via.html</code> application file also contains the images in this project. For example: <code>/datasets/</code> or <code>C:\Documents\data\</code>&nbsp;<strong>(note the trailing <code>/</code> and <code>\</code></strong>)</div>
             </div>
 
             <div class="value">
-              <input type="text" id="nc_settings.core.default_filepath" placeholder="/datasets/pascal/voc2012/VOCdevkit/VOC2012/JPEGImages/"/>
+              <input type="text" id="nc_settings.core.default_filepath" placeholder="/datasets/"/>
             </div>
           </div>
 
@@ -774,7 +712,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             </div>
 
             <div class="value">
-              <input type="text" id="settings_input_new_filepath" placeholder="/datasets/pascal/voc2012/VOCdevkit/VOC2012/JPEGImages"/>
+              <input type="text" id="settings_input_new_filepath" placeholder="/datasets/"/>
             </div>
           </div>
 
@@ -965,28 +903,8 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
         <div id="page_license" class="display_area_content display_none narrow_page_content">
           <pre>
-Copyright (c) 2016-2019, Abhishek Dutta, Visual Geometry Group, Oxford University and VIA Contributors.
+Copyright (c) 2020, Dell Du.
 All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation
-and/or other materials provided with the distribution.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot;
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
           </pre>
         </div>
       </div> <!-- end of display_area -->
@@ -996,58 +914,9 @@ POSSIBILITY OF SUCH DAMAGE.
          items like Keyboard Shortcut hidden under the attributes panel -->
     <div style="width: 100%;" id="vertical_space"></div>
 
-    <!-- DEMO SCRIPT AUTOMATICALLY INSERTED BY VIA PACKER SCRIPT -->
-<!-- START: Contents of file: via.js-->
+
+<!-- START: Contents js-->
 <script>
-/*
-  VGG Image Annotator (via)
-  www.robots.ox.ac.uk/~vgg/software/via/
-
-  Copyright (c) 2016-2019, Abhishek Dutta, Visual Geometry Group, Oxford University and VIA Contributors.
-  All rights reserved.
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions are met:
-
-  Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-  Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-  POSSIBILITY OF SUCH DAMAGE.
-*/
-
-/*
-  Links:
-  - https://gitlab.com/vgg/via/blob/master/Contributors.md : list of developers who have contributed code to the VIA project.
-  - https://gitlab.com/vgg/via/blob/master/CodeDoc.md : source code documentation
-  - https://gitlab.com/vgg/via/blob/master/CONTRIBUTING.md : guide for contributors
-
-  This source code can be grouped into the following categories:
-  - Data structure for annotations
-  - Initialization routine
-  - Handlers for top navigation bar
-  - Local file uploaders
-  - Data Importer
-  - Data Exporter
-  - Maintainers of user interface
-  - Image click handlers
-  - Canvas update routines
-  - Region collision routines
-  - Shortcut key handlers
-  - Persistence of annotation data in browser cache (i.e. localStorage)
-  - Handlers for attributes input panel (spreadsheet like user input panel)
-*/
 
 "use strict";
 
@@ -1309,10 +1178,6 @@ var NC_LEFTSIDEBAR_WIDTH_CHANGE          = 1;   // in rem
 var NC_POLYGON_SEGMENT_SUBTENDED_ANGLE   = 5;   // in degree (used to approximate shapes using polygon)
 var NC_FLOAT_PRECISION = 3; // number of decimal places to include in float values
 
-// COCO Export
-var NC_COCO_EXPORT_RSHAPE = ['rect', 'circle', 'ellipse', 'polygon', 'point'];
-var NC_COCO_EXPORT_ATTRIBUTE_TYPE = [NC_ATTRIBUTE_TYPE.DROPDOWN,
-                                      NC_ATTRIBUTE_TYPE.RADIO];
 //
 // Data structure to store metadata about file and regions
 //
@@ -1566,11 +1431,6 @@ function sel_local_data_file(type) {
       invisible_file_input.onchange = import_annotations_from_file;
       break;
 
-    case 'annotations_coco':
-      invisible_file_input.accept='.json';
-      invisible_file_input.onchange = load_coco_annotations_json_file;
-      break;
-
     case 'files_url':
       invisible_file_input.accept='';
       invisible_file_input.onchange = import_files_url_from_file;
@@ -1626,10 +1486,6 @@ function import_annotations_from_file(event) {
       break;
     }
   }
-}
-
-function load_coco_annotations_json_file(event) {
-  load_text_file(event.target.files[0], import_coco_annotations_from_json);
 }
 
 function import_annotations_from_csv(data) {
@@ -1784,147 +1640,6 @@ function parse_csv_header_line(line) {
   } else {
     return { 'is_header':false };
   }
-}
-
-// see http://cocodataset.org/#format-data
-function import_coco_annotations_from_json(data_str) {
-  return new Promise( function(ok_callback, err_callback) {
-    if (data_str === '' || typeof(data_str) === 'undefined') {
-      show_message('Empty file');
-      return;
-    }
-    var coco = JSON.parse(data_str);
-    if( !coco.hasOwnProperty('info') ||
-        !coco.hasOwnProperty('categories') ||
-        !coco.hasOwnProperty('annotations') ||
-        !coco.hasOwnProperty('images') ) {
-      show_message('File does not contain valid annotations in COCO format.');
-      return;
-    }
-
-    // create nc_attributes from coco['categories']
-    var category_id_to_attribute_name = {};
-    for( var i in coco['categories'] ) {
-      var sc    = coco['categories'][i]['supercategory'];
-      var cid   = coco['categories'][i]['id'];
-      var cname = coco['categories'][i]['name'];
-      if( !nc_attributes['region'].hasOwnProperty(sc)) {
-        nc_attributes['region'][sc] = {'type':NC_ATTRIBUTE_TYPE.RADIO,
-                                         'description':'coco["categories"][' + i + ']=' + JSON.stringify(coco['categories'][i]),
-                                         'options':{},
-                                         'default_options':{}
-                                        };
-      }
-      nc_attributes['region'][sc]['options'][cid] = cname;
-      category_id_to_attribute_name[cid] = sc;
-    }
-    // if more than 5 options, convert the attribute type to DROPDOWN
-    for( var attr_name in nc_attributes['region'] ) {
-      if( Object.keys(nc_attributes['region'][attr_name]['options']).length > 5 ) {
-        nc_attributes['region'][attr_name]['type'] = NC_ATTRIBUTE_TYPE.DROPDOWN;
-      }
-    }
-
-    // create an map of image_id and their annotations
-    var image_id_to_annotation_index = {};
-    for ( var annotation_index in coco['annotations'] ) {
-      var coco_image_id = coco.annotations[annotation_index]['image_id'];
-      if ( !image_id_to_annotation_index.hasOwnProperty(coco_image_id) ) {
-        image_id_to_annotation_index[coco_image_id] = [];
-      }
-      image_id_to_annotation_index[coco_image_id].push( annotation_index );
-    }
-
-    // add all files and annotations
-    nc_img_metadata = {};
-    nc_image_id_list = [];
-    nc_image_filename_list = [];
-    nc_img_count = 0;
-    var imported_file_count = 0;
-    var imported_region_count = 0;
-    for ( var coco_img_index in coco['images'] ) {
-      var coco_img_id = coco['images'][coco_img_index]['id'];
-      var filename;
-      if ( coco.images[coco_img_index].hasOwnProperty('coco_url') &&
-           coco.images[coco_img_index]['coco_url'] !== "") {
-        filename = coco.images[coco_img_index]['coco_url'];
-      } else {
-        filename = coco.images[coco_img_index]['file_name'];
-      }
-      nc_img_metadata[coco_img_id] = { 'filename':filename,
-                                         'size'    :-1,
-                                         'regions' :[],
-                                         'file_attributes': {
-                                           'width' :coco.images[coco_img_index]['width'],
-                                           'height':coco.images[coco_img_index]['height']
-                                         },
-                                       };
-      nc_image_id_list.push(coco_img_id);
-      nc_image_filename_list.push(filename);
-      nc_img_count = nc_img_count + 1;
-
-      // add all annotations associated with this file
-      if ( image_id_to_annotation_index.hasOwnProperty(coco_img_id) ) {
-        for ( var i in image_id_to_annotation_index[coco_img_id] ) {
-          var annotation_i = coco['annotations'][ image_id_to_annotation_index[coco_img_id][i] ];
-          var bbox_from_polygon = polygon_to_bbox(annotation_i['segmentation']);
-
-          // ensure rectangles get imported as rectangle (and not as polygon)
-          var is_rectangle = true;
-          for (var j = 0; i < annotation_i['bbox'].length; ++j) {
-            if (annotation_i['bbox'][j] !== bbox_from_polygon[j]) {
-              is_rectangle = false;
-              break;
-            }
-          }
-
-          var region_i = { 'shape_attributes': {}, 'region_attributes': {} };
-          var attribute_name = category_id_to_attribute_name[ annotation_i['category_id'] ];
-          var attribute_value = annotation_i['category_id'].toString();
-          region_i['region_attributes'][attribute_name] = attribute_value;
-
-          if ( annotation_i['segmentation'][0].length === 8 && is_rectangle ) {
-            region_i['shape_attributes'] = { 'name':'rect',
-                                             'x': annotation_i['bbox'][0],
-                                             'y': annotation_i['bbox'][1],
-                                             'width': annotation_i['bbox'][2],
-                                             'height': annotation_i['bbox'][3]};
-          } else {
-            region_i['shape_attributes'] = { 'name':'polygon',
-                                             'all_points_x':[],
-                                             'all_points_y':[]};
-            for ( var j = 0; j < annotation_i['segmentation'][0].length; j = j + 2 ) {
-              region_i['shape_attributes']['all_points_x'].push( annotation_i['segmentation'][0][j] );
-              region_i['shape_attributes']['all_points_y'].push( annotation_i['segmentation'][0][j+1] );
-            }
-          }
-          nc_img_metadata[coco_img_id]['regions'].push(region_i);
-          imported_region_count = imported_region_count + 1;
-        }
-      }
-    }
-    show_message('Import Summary : [' + nc_img_count + '] new files, ' +
-                 '[' + imported_region_count + '] regions.');
-
-    if(nc_img_count) {
-      update_img_fn_list();
-    }
-
-    if(nc_current_image_loaded) {
-      if(imported_region_count) {
-        update_attributes_update_panel();
-        annotation_editor_update_content();
-        nc_load_canvas_regions(); // image to canvas space transform
-        nc_redraw_reg_canvas();
-        nc_reg_canvas.focus();
-      }
-    } else {
-      if(nc_img_count) {
-        nc_show_img(0);
-      }
-    }
-    ok_callback([nc_img_count, imported_region_count, 0]);
-  });
 }
 
 function import_annotations_from_json(data_str) {
@@ -2250,246 +1965,9 @@ function packnc_metadata(return_type) {
       ok_callback(csvdata);
     }
 
-    // see http://cocodataset.org/#format-data
-    if( return_type === 'coco' ) {
-      img_stat_set_all().then( function(ok) {
-        var coco = export_project_to_coco_format();
-        ok_callback( [ coco ] );
-      }.bind(this), function(err) {
-        err_callback(err);
-      }.bind(this));
-    } else {
       // default format is JSON
-      ok_callback( [ JSON.stringify(nc_img_metadata) ] );
-    }
+    ok_callback( [ JSON.stringify(nc_img_metadata) ] );
   }.bind(this));
-}
-
-function export_project_to_coco_format() {
-  var coco = { 'info':{}, 'images':[], 'annotations':[], 'licenses':[], 'categories':[] };
-  coco['info'] = { 'year': new Date().getFullYear(),
-                   'version': '1.0',
-                   'description': 'VIA project exported to COCO format using VGG Image Annotator (http://www.robots.ox.ac.uk/~vgg/software/via/)',
-                   'contributor': '',
-                   'url': 'http://www.robots.ox.ac.uk/~vgg/software/via/',
-                   'date_created': new Date().toString(),
-                 };
-  coco['licenses'] = [ {'id':0, 'name':'Unknown License', 'url':''} ]; // indicates that license is unknown
-
-  var skipped_annotation_count = 0;
-  // We want to ensure that a COCO project imported in VIA and then exported again back to
-  // COCO format using VIA retains the image_id and category_id present in the original COCO project.
-  // A VIA project that has been created by importing annotations from a COCO project contains
-  // unique image_id of type integer and contains all unique option id. If we detect this, we reuse
-  // the existing image_id and category_id, otherwise we assign a new unique id sequentially.
-  // Currently, it is not possible to preserve the annotation_id
-  var assign_unique_id = false;
-  for(var img_id in nc_img_metadata) {
-    if(Number.isNaN(parseInt(img_id))) {
-      assign_unique_id = true; // since COCO only supports image_id of type integer, we cannot reuse the VIA's image-id
-      break;
-    }
-  }
-  if(assign_unique_id) {
-    // check if all the options have unique id
-    var attribute_option_id_list = [];
-    for(var attr_name in nc_attributes) {
-      if( !NC_COCO_EXPORT_ATTRIBUTE_TYPE.includes(nc_attributes[attr_name]['type']) ) {
-        continue; // skip this attribute as it will not be included in COCO export
-      }
-
-      for(var attr_option_id in nc_attributes[attr_name]['options']) {
-        if(attribute_option_id_list.includes(attr_option_id) ||
-           Number.isNaN(parseInt(attr_option_id)) ) {
-          assign_unique_id = true;
-          break;
-        } else {
-          attribute_option_id_list.push(assign_unique_id);
-        }
-      }
-    }
-  }
-
-  // add categories
-  var attr_option_id_list = [];
-  var attr_option_id_to_category_id = {};
-  var unique_category_id = 1;
-  for(var attr_name in nc_attributes['region']) {
-    if( NC_COCO_EXPORT_ATTRIBUTE_TYPE.includes(nc_attributes['region'][attr_name]['type']) ) {
-      for(var attr_option_id in nc_attributes['region'][attr_name]['options']) {
-        var category_id;
-        if(assign_unique_id) {
-          category_id = unique_category_id;
-          unique_category_id = unique_category_id + 1;
-        } else {
-          category_id = parseInt(attr_option_id);
-        }
-        coco['categories'].push({
-          'supercategory':attr_name,
-          'id':category_id,
-          'name':nc_attributes['region'][attr_name]['options'][attr_option_id]
-        });
-        attr_option_id_to_category_id[attr_option_id] = category_id;
-      }
-    }
-  }
-
-  // add files and all their associated annotations
-  var annotation_id = 1;
-  var unique_img_id = 1;
-  for( var img_index in nc_image_id_list ) {
-    var img_id = nc_image_id_list[img_index];
-    var file_src = nc_settings['core']['default_filepath'] + nc_img_metadata[img_id].filename;
-    if ( nc_img_fileref[img_id] instanceof File ) {
-      file_src = nc_img_fileref[img_id].filename;
-    }
-
-    var coco_img_id;
-    if(assign_unique_id) {
-      coco_img_id = unique_img_id;
-      unique_img_id = unique_img_id + 1;
-    } else {
-      coco_img_id = parseInt(img_id);
-    }
-
-    coco['images'].push( {
-      'id':coco_img_id,
-      'width':nc_img_stat[img_index][0],
-      'height':nc_img_stat[img_index][1],
-      'file_name':nc_img_metadata[img_id].filename,
-      'license':0,
-      'flickr_url':file_src,
-      'coco_url':file_src,
-      'date_captured':'',
-    } );
-
-    // add all annotations associated with this file
-    for( var rindex in nc_img_metadata[img_id].regions ) {
-      var region = nc_img_metadata[img_id].regions[rindex];
-      if( !NC_COCO_EXPORT_RSHAPE.includes(region.shape_attributes['name']) ) {
-        skipped_annotation_count = skipped_annotation_count + 1;
-        continue; // skip this region as COCO does not allow it
-      }
-
-      var coco_annotation = via_region_shape_to_coco_annotation(region.shape_attributes);
-      coco_annotation['id'] = annotation_id;
-      coco_annotation['image_id'] = coco_img_id;
-
-      var region_aid_list = Object.keys(region['region_attributes']);
-      for(var region_attribute_id in region['region_attributes']) {
-        var region_attribute_value = region['region_attributes'][region_attribute_id];
-        if(attr_option_id_to_category_id.hasOwnProperty(region_attribute_value)) {
-          coco_annotation['category_id'] = attr_option_id_to_category_id[region_attribute_value];
-          coco['annotations'].push(coco_annotation);
-          annotation_id = annotation_id + 1;
-        } else {
-          skipped_annotation_count = skipped_annotation_count + 1;
-          continue; // skip attribute value not supported by COCO format
-        }
-      }
-    }
-  }
-
-  show_message('Skipped ' + skipped_annotation_count + ' annotations. COCO format only supports the following attribute types: ' + JSON.stringify(NC_COCO_EXPORT_ATTRIBUTE_TYPE) + ' and region shapes: ' + JSON.stringify(NC_COCO_EXPORT_RSHAPE));
-  return [ JSON.stringify(coco) ];
-}
-
-function via_region_shape_to_coco_annotation(shape_attributes) {
-  var annotation = { 'segmentation':[[]], 'area':[], 'bbox':[], 'iscrowd':0 };
-
-  switch(shape_attributes['name']) {
-  case 'rect':
-    var x0 = shape_attributes['x'];
-    var y0 = shape_attributes['y'];
-    var w  = parseInt(shape_attributes['width']);
-    var h  = parseInt(shape_attributes['height']);
-    var x1 = x0 + w;
-    var y1 = y0 + h;
-    annotation['segmentation'][0] = [x0, y0, x1, y0, x1, y1, x0, y1];
-    annotation['area'] =  w * h ;
-
-    annotation['bbox'] = [x0, y0, w, h];
-    break;
-
-  case 'point':
-    var cx = shape_attributes['cx'];
-    var cy = shape_attributes['cy'];
-    // 2 is for visibility - currently set to always inside segmentation.
-    // see Keypoint Detection: http://cocodataset.org/#format-data
-    annotation['keypoints'] = [cx, cy, 2];
-    annotation['num_keypoints'] = 1;
-    break;
-
-  case 'circle':
-    var a,b;
-    a = shape_attributes['r'];
-    b = shape_attributes['r'];
-    var theta_to_radian = Math.PI/180;
-
-    for ( var theta = 0; theta < 360; theta = theta + NC_POLYGON_SEGMENT_SUBTENDED_ANGLE ) {
-      var theta_radian = theta * theta_to_radian;
-      var x = shape_attributes['cx'] + a * Math.cos(theta_radian);
-      var y = shape_attributes['cy'] + b * Math.sin(theta_radian);
-      annotation['segmentation'][0].push( fixfloat(x), fixfloat(y) );
-    }
-    annotation['bbox'] = polygon_to_bbox(annotation['segmentation'][0]);
-    annotation['area'] = annotation['bbox'][2] * annotation['bbox'][3];
-    break;
-
-  case 'ellipse':
-    var a,b;
-    a = shape_attributes['rx'];
-    b = shape_attributes['ry'];
-    var rotation = 0;
-    // older version of VIA2 did not support rotated ellipse and hence 'theta' attribute may not be available
-    if( shape_attributes.hasOwnProperty('theta') ) {
-      rotation = shape_attributes['theta'];
-    }
-
-    var theta_to_radian = Math.PI/180;
-
-    for ( var theta = 0; theta < 360; theta = theta + NC_POLYGON_SEGMENT_SUBTENDED_ANGLE ) {
-      var theta_radian = theta * theta_to_radian;
-      var x = shape_attributes['cx'] +
-              ( a * Math.cos(theta_radian) * Math.cos(rotation) ) -
-              ( b * Math.sin(theta_radian) * Math.sin(rotation) );
-      var y = shape_attributes['cy'] +
-              ( a * Math.cos(theta_radian) * Math.sin(rotation) ) +
-              ( b * Math.sin(theta_radian) * Math.cos(rotation) );
-      annotation['segmentation'][0].push( fixfloat(x), fixfloat(y) );
-    }
-    annotation['bbox'] = polygon_to_bbox(annotation['segmentation'][0]);
-    annotation['area'] = annotation['bbox'][2] * annotation['bbox'][3];
-    break;
-
-  case 'polygon':
-    annotation['segmentation'][0] = [];
-    var x0 = +Infinity;
-    var y0 = +Infinity;
-    var x1 = -Infinity;
-    var y1 = -Infinity;
-    for ( var i in shape_attributes['all_points_x'] ) {
-      annotation['segmentation'][0].push( shape_attributes['all_points_x'][i] );
-      annotation['segmentation'][0].push( shape_attributes['all_points_y'][i] );
-      if ( shape_attributes['all_points_x'][i] < x0 ) {
-        x0 = shape_attributes['all_points_x'][i];
-      }
-      if ( shape_attributes['all_points_y'][i] < y0 ) {
-        y0 = shape_attributes['all_points_y'][i];
-      }
-      if ( shape_attributes['all_points_x'][i] > x1 ) {
-        x1 = shape_attributes['all_points_x'][i];
-      }
-      if ( shape_attributes['all_points_y'][i] > y1 ) {
-        y1 = shape_attributes['all_points_y'][i];
-      }
-    }
-    var w = x1 - x0;
-    var h = y1 - y0;
-    annotation['bbox'] = [x0, y0, w, h];
-    annotation['area'] = w * h; // approximate area
-  }
-  return annotation;
 }
 
 function save_data_to_local_file(data, filename) {
@@ -8153,13 +7631,21 @@ function project_on_name_update(p) {
   project_set_name(p.value);
 }
 
+function number_padding_with_zeros(num, n) {
+  var len = num.toString().length;
+  while(len < n) {
+    num = "0" + num;
+    len++;
+  }
+  return num;
+}
+
 function project_get_default_project_name() {
   const now = new Date();
-  var MONTH_SHORT_NAME = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  var ts = now.getDate() + MONTH_SHORT_NAME[now.getMonth()] + now.getFullYear() +
-      '_' + now.getHours() + 'h' + now.getMinutes() + 'm';
+  var ts = now.getFullYear() + number_padding_with_zeros(now.getMonth() + 1, 2) + number_padding_with_zeros(now.getDate(), 2)
+       + '_' + number_padding_with_zeros(now.getHours(), 2) + number_padding_with_zeros(now.getMinutes(), 2);
 
-  var project_name = 'via_project_' + ts;
+  var project_name = 'project_' + ts;
   return project_name;
 }
 
