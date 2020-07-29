@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>New Canvas</title>
     <meta name="author" content="Dell Du">
+    <meta name="description" content="Canvas is a standalone image annotator application packaged as a single HTML file that runs on most modern web browsers.">
 
 <!-- BEGIN: Contents css-->
 <style>
@@ -307,7 +308,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
           <li>Help
             <ul>
               <li onclick="set_display_area_content(NC_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)" title="Show a guide to get started with this application">Getting Started</li>
-              <li onclick="" title="Report an issue to the developers of this application"><a href="https://github.com/delldu/NewCanvas/issues" target="_blank">Report issues</a></li>
+              <li onclick="" title="Report an issue to the developers of this application"><a href="#" target="_blank">Report issues</a></li>
               <li class="submenu_divider"></li>
               <li onclick="set_display_area_content(NC_DISPLAY_AREA_CONTENT_NAME.PAGE_ABOUT)" title="Show more details about this application">About</li>
             </ul>
@@ -610,16 +611,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             <button onclick="settings_save()" value="save_settings" style="margin-top:2rem">Save</button>
             <button onclick="settings_panel_toggle()" value="cancel_settings" style="margin-left:2rem;">Cancel</button>
           </div>
-        </div> <!-- end of settings panel
-
-        <div id="page_404" class="display_area_content display_none narrow_page_content">
-          <h2>File Not Found</h2>
-          <p>Filename: <span style="font-family:Mono;" id="page_404_filename"></span></p>
-
-          <p>We recommend that you update the default path in <span class="text_button" title="Show Project Settings" onclick="settings_panel_toggle()">project settings</span> to the folder which contains this image.</p>
-
-          <p>A temporary fix is to use <span class="text_button" title="Load or Add Images" onclick="sel_local_images()">browser's file selector</span> to manually locate and add this file. We do not recommend this approach because it requires you to repeat this process every time your load this project in the application.</p>
-        </div> <!-- end of file not found panel -->
+        </div>
 
         <div id="page_start_info" class="display_area_content display_none narrow_page_content">
         </div>
@@ -645,6 +637,8 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     <!-- this vertical spacer is needed to allow scrollbar to show
          items like Keyboard Shortcut hidden under the attributes panel -->
     <div style="width: 100%;" id="vertical_space"></div>
+
+
 <!-- START: Contents js-->
 <script>
 
@@ -842,7 +836,7 @@ nc_settings.ui.image_grid = {};
 nc_settings.ui.image_grid.img_height          = 80;  // in pixel
 nc_settings.ui.image_grid.shape_fill         = 'none';
 nc_settings.ui.image_grid.shape_fill_opacity = 0.3;
-nc_settings.ui.image_grid.shape_stroke       = 'yellow';
+nc_settings.ui.image_grid.shape_stroke       = 'yellow';  // #ffff00
 nc_settings.ui.image_grid.shape_stroke_width = 1;
 nc_settings.ui.image_grid.show_region_shape   = true;
 nc_settings.ui.image_grid.show_image_policy   = 'all';
@@ -965,10 +959,6 @@ function nc_init_mouse_handlers() {
   nc_reg_canvas.addEventListener('touchmove', nc_reg_canvas_mousemove_handler, false);
 }
 
-//
-// Download image with annotations
-//
-
 function download_as_image() {
   if ( nc_display_area_content_name !== NC_DISPLAY_AREA_CONTENT_NAME['IMAGE'] ) {
     show_message('This functionality is only available in single image view mode');
@@ -1014,9 +1004,7 @@ function download_as_image() {
   }
 }
 
-//
 // Display area content
-//
 function clear_display_area() {
   var panels = document.getElementsByClassName('display_area_content');
   var i;
@@ -1081,9 +1069,7 @@ function show_image_grid_view() {
   }
 }
 
-//
 // Handlers for top navigation bar
-//
 function sel_local_images() {
   // source: https://developer.mozilla.org/en-US/docs/Using_files_from_web_applications
   if (invisible_file_input) {
@@ -1092,15 +1078,6 @@ function sel_local_images() {
     invisible_file_input.onchange = project_file_add_local;
     invisible_file_input.click();
   }
-}
-
-// s = '{"name":"rect","x":188,"y":90,"width":243,"height":233}'
-function json_str_to_map(s) {
-  if (typeof(s) === 'undefined' || s.length === 0 ) {
-    return {};
-  }
-
-  return JSON.parse(s);
 }
 
 // ensure the exported json string conforms to RFC 4180
@@ -1119,18 +1096,6 @@ function map_to_json(m) {
 
 function escape_for_csv(s) {
   return s.replace(/["]/g, '""');
-}
-
-function unescape_from_csv(s) {
-  return s.replace(/""/g, '"');
-}
-
-function remove_prefix_suffix_quotes(s) {
-  if ( s.charAt(0) === '"' && s.charAt(s.length-1) === '"' ) {
-    return s.substr(1, s.length-2);
-  } else {
-    return s;
-  }
 }
 
 function clone_image_region(r0) {
@@ -1278,6 +1243,7 @@ function show_message(msg, t) {
   }, timeout);
 }
 
+// xxxx9999
 function nc_regions_group_color_init() {
   nc_canvas_regions_group_color = {};
   var aid = nc_settings.ui.image.region_color;
@@ -1399,7 +1365,7 @@ function select_shape(sel_shape_name) {
   }
 }
 
-function set_all_canvas_size(w, h) {
+function set_canvas_size(w, h) {
   nc_reg_canvas.height = h;
   nc_reg_canvas.width = w;
 
@@ -1407,17 +1373,9 @@ function set_all_canvas_size(w, h) {
   image_panel.style.width  = w + 'px';
 }
 
-function set_all_canvas_scale(s) {
-  nc_reg_ctx.scale(s, s);
-}
-
-function show_all_canvas() {
-  image_panel.style.display = 'inline-block';
-}
-
-function hide_all_canvas() {
-  image_panel.style.display = 'none';
-}
+// function set_all_canvas_scale(s) {
+//   nc_reg_ctx.scale(s, s);
+// }
 
 function jump_to_image(image_index) {
   if ( nc_img_count <= 0 ) {
@@ -4229,10 +4187,11 @@ function set_zoom(zoom_level_index) {
   }
 
   var zoom_scale = NC_CANVAS_ZOOM_LEVELS[nc_canvas_zoom_level_index];
-  set_all_canvas_scale(zoom_scale);
+  nc_reg_ctx.scale(zoom_scale, zoom_scale);
+
   var canvas_w = ( nc_current_image.naturalWidth  * zoom_scale ) / nc_canvas_scale_without_zoom;
   var canvas_h = ( nc_current_image.naturalHeight * zoom_scale ) / nc_canvas_scale_without_zoom;
-  set_all_canvas_size(canvas_w, canvas_h);
+  set_canvas_size(canvas_w, canvas_h);
   nc_canvas_scale = nc_canvas_scale_without_zoom / zoom_scale;
   nc_canvas_scale = nc_canvas_scale_without_zoom / zoom_scale;
 
@@ -6657,8 +6616,7 @@ function nc_show_img_from_buffer(img_index) {
     nc_canvas_height = Math.round(nc_canvas_height);
     nc_canvas_scale = nc_current_image.naturalWidth / nc_canvas_width;
     nc_canvas_scale_without_zoom = nc_canvas_scale;
-    set_all_canvas_size(nc_canvas_width, nc_canvas_height);
-    //set_all_canvas_scale(nc_canvas_scale_without_zoom);
+    set_canvas_size(nc_canvas_width, nc_canvas_height);
 
     // reset all regions to "not selected" state
     toggle_all_regions_selection(false);
