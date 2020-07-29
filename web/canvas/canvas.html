@@ -115,13 +115,13 @@ button.leftsidebar_accordion.active:after { content: '\2796'; }
 #project_info_panel .col input[type=text] { font-size:0.8rem; border:none; border-bottom:1px solid #cccccc; margin: 0; width:100%;}
 #project_info_panel .col input:focus      { border-bottom:1px solid #000000; background-color:#f2f2f2; color:#000000; }
 
-/* Region shape selection panel inside leftsidebar */
+/* shape selection panel inside leftsidebar */
 ul.region_shape          { font-size:xx-large; list-style-type:none; overflow:hidden; padding:0.4em 0; margin:0; }
 ul.region_shape li       { float:left; padding:0 0.2em; fill:#ffffff; stroke:#000000; }
 ul.region_shape li:hover { cursor:pointer; fill:#ffffff; stroke:#ff0000; }
 ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
-/* cursor coordinates inside region shape selection panel in leftsidebar */
+/* cursor coordinates inside shape selection panel in leftsidebar */
 #region_info { font-size:0.8em; margin-bottom:0.4em; }
 
 /* Loaded image list shown in leftsidebar panel */
@@ -181,32 +181,32 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     <svg style="display:none;" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
       <defs>
         <symbol id="shape_rectangle">
-          <title>Rectangular region shape</title>
-          <rect width="20" height="12" x="6" y="10" stroke-width="2"></rect>
+          <title>Rectangle</title>
+          <rect width="20" height="12" x="6" y="10" stroke-width="1"></rect>
         </symbol>
         <symbol id="shape_circle">
-          <title>Circular region shape</title>
-          <circle r="10" cx="16" cy="16" stroke-width="2"></circle>
+          <title>Circle</title>
+          <circle r="10" cx="16" cy="16" stroke-width="1"></circle>
         </symbol>
         <symbol id="shape_ellipse">
-          <title>Elliptical region shape</title>
-          <ellipse rx="12" ry="8" cx="16" cy="16" stroke-width="2"></ellipse>
+          <title>Ellipse</title>
+          <ellipse rx="12" ry="8" cx="16" cy="16" stroke-width="1"></ellipse>
         </symbol>
         <symbol id="shape_polygon">
-          <title>Polygon region shape</title>
-          <path d="M 15.25,2.2372 3.625,11.6122 6,29.9872 l 20.75,-9.625 2.375,-14.75 z" stroke-width="2"></path>
+          <title>Polygon</title>
+          <path d="M 15.25,2.2372 3.625,11.6122 6,29.9872 l 20.75,-9.625 2.375,-14.75 z" stroke-width="1"></path>
         </symbol>
         <symbol id="shape_point">
-          <title>Point region shape</title>
-          <circle r="3" cx="16" cy="16" stroke-width="2"></circle>
+          <title>Point</title>
+          <circle r="3" cx="16" cy="16" stroke-width="1"></circle>
         </symbol>
         <symbol id="shape_polyline">
-          <title>Polyline region shape</title>
-          <path d="M 2,12 10,24 18,12 24,18" stroke-width="2"></path>
-          <circle r="1" cx="2" cy="12" stroke-width="2"></circle>
-          <circle r="1" cx="10" cy="24" stroke-width="2"></circle>
-          <circle r="1" cx="18" cy="12" stroke-width="2"></circle>
-          <circle r="1" cx="24" cy="18" stroke-width="2"></circle>
+          <title>Polyline</title>
+          <path d="M 2,12 10,24 18,12 24,18" stroke-width="1"></path>
+          <circle r="1" cx="2" cy="12" stroke-width="1"></circle>
+          <circle r="1" cx="10" cy="24" stroke-width="1"></circle>
+          <circle r="1" cx="18" cy="12" stroke-width="1"></circle>
+          <circle r="1" cx="24" cy="18" stroke-width="1"></circle>
         </symbol>
 
         <!-- Material icons downloaded from https://material.io/icons -->
@@ -260,12 +260,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         </symbol>
         <symbol id="icon_close">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
-        </symbol>
-        <symbol id="icon_insertcomment">
-          <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"></path>
-        </symbol>
-        <symbol id="icon_checkbox">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
         </symbol>
         <symbol id="icon_filedownload">
           <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
@@ -325,8 +319,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
       <div class="toolbar">
         <svg onclick="project_open_select_project_file()" viewbox="0 0 24 24"><use xlink:href="#icon_open"></use><title>Open Project</title></svg>
         <svg onclick="project_save_with_confirm()" viewbox="0 0 24 24"><use xlink:href="#icon_save"></use><title>Save Project</title></svg>
-        <svg onclick="settings_panel_toggle()" viewbox="0 0 24 24"><use xlink:href="#icon_settings"></use><title>Update Project Settings</title></svg>
-        <svg onclick="download_as_image()" viewbox="0 0 24 24"><use xlink:href="#icon_filedownload"></use><title>Download image annotations as Image</title></svg>
 
         <svg onclick="image_grid_toggle()" id="toolbar_image_grid_toggle" style="margin-left:1rem;" viewbox="0 0 24 24"><use xlink:href="#icon_gridon"></use><title>Switch to Image Grid View</title></svg>
 
@@ -336,6 +328,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
         <svg onclick="zoom_in()" style="margin-left:1rem;" viewbox="0 0 24 24"><use xlink:href="#icon_zoomin"></use><title>Zoom In</title></svg>
         <svg onclick="zoom_out()" viewbox="0 0 24 24"><use xlink:href="#icon_zoomout"></use><title>Zoom Out</title></svg>
+        <svg onclick="download_as_image()" viewbox="0 0 24 24"><use xlink:href="#icon_filedownload"></use><title>Download image annotations as Image</title></svg>
 
         <svg onclick="sel_all_regions()" viewbox="0 0 24 24" style="margin-left:1rem;"><use xlink:href="#icon_selectall"></use><title>Select All Regions</title></svg>
         <svg onclick="copy_sel_regions()" viewbox="0 0 24 24"><use xlink:href="#icon_copy"></use><title>Copy Regions</title></svg>
@@ -362,16 +355,24 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
           <span class="text_button" onclick="leftsidebar_toggle()" title="Show/hide this toolbar panel">&ltrif;</span>
         </div>
 
-        <button class="leftsidebar_accordion active">Region Shape</button>
+      <!-- Shape -->
+       <button class="leftsidebar_accordion active">Shape</button>
         <div class="leftsidebar_accordion_panel show">
           <ul class="region_shape">
-            <li id="region_shape_rect" class="selected" onclick="select_region_shape('rect')" title="Rectangle (Shortcut key 1)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_rectangle"></use></svg></li>
-            <li id="region_shape_circle" onclick="select_region_shape('circle')" title="Circle (Shortcut key 2)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_circle"></use></svg></li>
-            <li id="region_shape_ellipse" onclick="select_region_shape('ellipse')" title="Ellipse (Shortcut key 3)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_ellipse"></use></svg></li>
-            <li id="region_shape_polygon" onclick="select_region_shape('polygon')" title="Polygon (Shortcut key 4)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_polygon"></use></svg></li>
-            <li id="region_shape_point" onclick="select_region_shape('point')" title="Point (Shortcut key 5)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_point"></use></svg></li>
-            <li id="region_shape_polyline" onclick="select_region_shape('polyline')" title="Polyline (Shortcut key 6)"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_polyline"></use></svg></li>
+            <li id="region_shape_rect" class="selected" onclick="select_shape('rect')" title="Rectangle"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_rectangle"></use></svg></li>
+            <li id="region_shape_circle" onclick="select_shape('circle')" title="Circle"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_circle"></use></svg></li>
+            <li id="region_shape_ellipse" onclick="select_shape('ellipse')" title="Ellipse"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_ellipse"></use></svg></li>
+            <li id="region_shape_polygon" onclick="select_shape('polygon')" title="Polygon"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_polygon"></use></svg></li>
+            <li id="region_shape_point" onclick="select_shape('point')" title="Point"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_point"></use></svg></li>
+            <li id="region_shape_polyline" onclick="select_shape('polyline')" title="Polyline"><svg height="32" viewbox="0 0 32 32"><use xlink:href="#shape_polyline"></use></svg></li>
           </ul>
+          <div id="region_info" class="display_none">&nbsp;</div>
+        </div>
+
+      <!-- Color -->
+       <button class="leftsidebar_accordion active">Color</button>
+        <div class="leftsidebar_accordion_panel show">
+          <input type="color" id="color" value="#FF0000" class="selected" title="Color Picker">
           <div id="region_info" class="display_none">&nbsp;</div>
         </div>
 
@@ -381,7 +382,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
           <div id="project_info_panel">
             <div class="row">
               <span class="col"><label for="project_name">Name: </label></span>
-              <span class="col"><input type="text" value="" onchange="project_on_name_update(this)" id="project_name" title="project name"></span>
+              <span class="col"><input type="text" value="" onchange="change_project_name(this)" id="project_name" title="project name"></span>
             </div>
           </div>
           <div id="project_tools_panel">
@@ -404,7 +405,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
           </p>
         </div>
 
-        <button class="leftsidebar_accordion">Keyboard Shortcuts</button>
+        <button class="leftsidebar_accordion">Shortcut</button>
         <div class="leftsidebar_accordion_panel">
           <div style="display:block; text-align:center; padding:1rem;">Available only on image focus</div>
           <table>
@@ -756,6 +757,7 @@ var nc_is_debug_mode               = false;
 
 // region
 var nc_current_shape             = NC_REGION_SHAPE.RECT;
+var nc_current_color             = "#ffff00";
 var nc_current_polygon_region_id = -1;
 var nc_user_sel_region_id        = -1;
 var nc_click_x0 = 0; var nc_click_y0 = 0;
@@ -838,10 +840,10 @@ nc_settings.ui.leftsidebar_width          = 18;  // in rem
 
 nc_settings.ui.image_grid = {};
 nc_settings.ui.image_grid.img_height          = 80;  // in pixel
-nc_settings.ui.image_grid.rshape_fill         = 'none';
-nc_settings.ui.image_grid.rshape_fill_opacity = 0.3;
-nc_settings.ui.image_grid.rshape_stroke       = 'yellow';
-nc_settings.ui.image_grid.rshape_stroke_width = 2;
+nc_settings.ui.image_grid.shape_fill         = 'none';
+nc_settings.ui.image_grid.shape_fill_opacity = 0.3;
+nc_settings.ui.image_grid.shape_stroke       = 'yellow';
+nc_settings.ui.image_grid.shape_stroke_width = 1;
 nc_settings.ui.image_grid.show_region_shape   = true;
 nc_settings.ui.image_grid.show_image_policy   = 'all';
 
@@ -888,7 +890,7 @@ function file_metadata(filename, size) {
 }
 
 function file_region() {
-  this.shape_attributes  = {}; // region shape attributes
+  this.shape_attributes  = {}; // shape attributes
 }
 
 //
@@ -897,10 +899,6 @@ function file_region() {
 function nc_init() {
   console.log(NC_NAME);
   show_message(NC_NAME + ' version ' + NC_VERSION + '. Ready !', 2*NC_THEME_MESSAGE_TIMEOUT_MS);
-
-  if ( nc_is_debug_mode ) {
-    document.getElementById('ui_top_panel').innerHTML += '<span>DEBUG MODE</span>';
-  }
 
   document.getElementById('img_fn_list').style.display = 'block';
   document.getElementById('leftsidebar').style.display = 'table-cell';
@@ -922,6 +920,24 @@ function nc_init() {
   show_single_image_view();
   init_leftsidebar_accordion();
   init_message_panel();
+  quit_confirm();
+}
+
+function quit_confirm() {
+  if ( ! nc_is_debug_mode ) {
+    // warn user of possible loss of data
+    window.onbeforeunload = function (e) {
+      e = e || window.event;
+
+      // For IE and Firefox prior to version 4
+      if (e) {
+        e.returnValue = 'Did you save your data?';
+      }
+
+      // For Safari
+      return 'Did you save your data?';
+    };
+  }
 }
 
 function nc_init_reg_canvas_context() {
@@ -1347,8 +1363,8 @@ function nc_load_canvas_regions() {
   }
 }
 
-// updates currently selected region shape
-function select_region_shape(sel_shape_name) {
+// updates currently selected shape
+function select_shape(sel_shape_name) {
   for ( var shape_name in NC_REGION_SHAPE ) {
     var ui_element = document.getElementById('region_shape_' + NC_REGION_SHAPE[shape_name]);
     ui_element.classList.remove('selected');
@@ -1362,8 +1378,7 @@ function select_region_shape(sel_shape_name) {
   case NC_REGION_SHAPE.RECT: // Fall-through
   case NC_REGION_SHAPE.CIRCLE: // Fall-through
   case NC_REGION_SHAPE.ELLIPSE:
-    show_message('Press single click and drag mouse to draw ' +
-                 nc_current_shape + ' region');
+    show_message('[Click] and drag mouse to draw ' + nc_current_shape);
     break;
 
   case NC_REGION_SHAPE.POLYLINE:
@@ -1371,12 +1386,11 @@ function select_region_shape(sel_shape_name) {
     nc_is_user_drawing_polygon = false;
     nc_current_polygon_region_id = -1;
 
-    show_message('[Single Click] to define polygon/polyline vertices, ' +
-                 '[Backspace] to delete last vertex, [Enter] to finish, [Esc] to cancel drawing.' );
+    show_message('[Click] define polygon/polyline vertices, [Backspace] delete last vertex, [Enter] finish, [Esc] cancel.' );
     break;
 
   case NC_REGION_SHAPE.POINT:
-    show_message('Press single click to define points (or landmarks)');
+    show_message('[Click] define points (or landmarks)');
     break;
 
   default:
@@ -4862,24 +4876,6 @@ function hide_user_input_panel() {
   document.getElementById('user_input_panel').style.display = 'none';
 }
 
-
-function nc_get_file_metadata_stat(img_index_list, attr_id) {
-  var stat = {};
-  stat[attr_id] = {};
-  var i, n, img_id, img_index, value;
-  n = img_index_list.length;
-  for ( i = 0; i < n; ++i ) {
-    img_index = img_index_list[i];
-    img_id = nc_image_id_list[img_index];
-    if ( stat[attr_id].hasOwnProperty(value) ) {
-      stat[attr_id][value] += 1;
-    } else {
-      stat[attr_id][value] = 1;
-    }
-  }
-  return stat;
-}
-
 //
 // nc project
 //
@@ -4902,7 +4898,7 @@ function project_init_default_project() {
   project_set_name( project_get_default_project_name() );
 }
 
-function project_on_name_update(p) {
+function change_project_name(p) {
   project_set_name(p.value);
 }
 
@@ -4927,11 +4923,8 @@ function project_get_default_project_name() {
 function project_save_with_confirm() {
   var config = {'title':'Save Project' };
   var input = { 'project_name': { type:'text', name:'Project Name', value:nc_settings.project.name, disabled:false, size:30 },
-                'save_annotations':{ type:'checkbox', name:'Save region and file annotations (i.e. manual annotations)', checked:true, disabled:false},
-                // 'save_attributes':{ type:'checkbox', name:'Save region and file attributes.', checked:true},
+                'save_annotations':{ type:'checkbox', name:'Save region annotations (i.e. manual annotations)', checked:true, disabled:false},
                 'savenc_settings':{ type:'checkbox', name:'Save application settings', checked:true},
-                //                'save_base64_data':{ type:'checkbox', name:'Save base64 data of images (if present)', checked:false},
-                //                'save_images':{type:'checkbox', 'name':'Save images <span class="warning">(WARNING: only recommended for projects containing small number of images)</span>', value:false},
               };
 
   invoke_with_user_inputs(project_save_confirmed, input, config);
@@ -5515,7 +5508,7 @@ function image_grid_page_show_all_regions() {
     var n = p.childNodes.length;
     var i;
     for ( i = 0; i < n; ++i ) {
-      // draw region shape into global canvas for image grid
+      // draw shape into global canvas for image grid
       var img_index = image_grid_parse_html_img_id( p.childNodes[i].id );
       var img_param = []; // [width, height, originalWidth, originalHeight, x, y]
       img_param.push( parseInt(p.childNodes[i].width) );
@@ -5589,10 +5582,10 @@ function image_grid_show_region_shape(img_index, img_param) {
       var r2_svg = r2.get_svg_element();
       r2_svg.setAttribute('id', image_grid_get_html_region_id(img_index, i));
       r2_svg.setAttribute('class', html_img_id);
-      r2_svg.setAttribute('fill',         nc_settings.ui.image_grid.rshape_fill);
-      //r2_svg.setAttribute('fill-opacity', nc_settings.ui.image_grid.rshape_fill_opacity);
-      r2_svg.setAttribute('stroke',       nc_settings.ui.image_grid.rshape_stroke);
-      r2_svg.setAttribute('stroke-width', nc_settings.ui.image_grid.rshape_stroke_width);
+      r2_svg.setAttribute('fill',         nc_settings.ui.image_grid.shape_fill);
+      //r2_svg.setAttribute('fill-opacity', nc_settings.ui.image_grid.shape_fill_opacity);
+      r2_svg.setAttribute('stroke',       nc_settings.ui.image_grid.shape_stroke);
+      r2_svg.setAttribute('stroke-width', nc_settings.ui.image_grid.shape_stroke_width);
 
       document.getElementById('image_grid_content_rshape').appendChild(r2_svg);
     }
@@ -6226,32 +6219,6 @@ function image_zoom_init() {
 
 }
 
-//
-// hooks for sub-modules
-// implemented by sub-modules
-//
-//function nc_hook_next_image() {}
-//function nc_hook_prev_image() {}
-
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// Code borrowed from via2 branch
-// - in future, the <canvas> based reigon shape drawing will be replaced by <svg>
-//   because svg allows independent manipulation of individual regions without
-//   requiring to clear the canvas every time some region is updated.
-//
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// @file        nc_region.js
-// @description Implementation of region shapes like rectangle, circle, etc.
-// @author      Abhishek Dutta <adutta@robots.ox.ac.uk>
-// @date        17 June 2017
-//
-////////////////////////////////////////////////////////////////////////////////
-
 function nc_region( shape, id, data_img_space, view_scale_factor, view_offset_x, view_offset_y) {
   // Note the following terminology:
   //   view space  :
@@ -6273,7 +6240,7 @@ function nc_region( shape, id, data_img_space, view_scale_factor, view_offset_x,
   //
   // shape : {rect, circle, ellipse, line, polyline, polygon, point}
   // id    : unique region-id
-  // d[]   : (in view space) data whose meaning depend on region shape as follows:
+  // d[]   : (in view space) data whose meaning depend on shape as follows:
   //        rect     : d[x1,y1,x2,y2] or d[corner1_x, corner1_y, corner2_x, corner2_y]
   //        circle   : d[x1,y1,x2,y2] or d[center_x, center_y, circumference_x, circumference_y]
   //        ellipse  : d[x1,y1,x2,y2,transform]
@@ -6384,9 +6351,6 @@ nc_region.prototype.get_svg_string = function() {
   return this.svg_string;
 }
 
-///
-/// Region shape : rectangle
-///
 function nc_region_rect() {
   this.is_inside  = nc_region_rect.prototype.is_inside;
   this.is_on_edge = nc_region_rect.prototype.is_on_edge;
@@ -6419,7 +6383,7 @@ nc_region_rect.prototype.initialize = function() {
 }
 
 ///
-/// Region shape : circle
+/// circle
 ///
 function nc_region_circle() {
   this.is_inside  = nc_region_circle.prototype.is_inside;
@@ -6442,7 +6406,7 @@ nc_region_circle.prototype.initialize = function() {
 
 
 ///
-/// Region shape : ellipse
+/// shape : ellipse
 ///
 function nc_region_ellipse() {
   this.is_inside  = nc_region_ellipse.prototype.is_inside;
@@ -6465,11 +6429,6 @@ nc_region_ellipse.prototype.initialize = function() {
   this.recompute_svg = true;
 }
 
-
-
-///
-/// Region shape : line
-///
 function nc_region_line() {
   this.is_inside  = nc_region_line.prototype.is_inside;
   this.is_on_edge = nc_region_line.prototype.is_on_edge;
@@ -6493,7 +6452,7 @@ nc_region_line.prototype.initialize = function() {
 
 
 ///
-/// Region shape : polyline
+/// shape : polyline
 ///
 function nc_region_polyline() {
   this.is_inside  = nc_region_polyline.prototype.is_inside;
@@ -6517,9 +6476,6 @@ nc_region_polyline.prototype.initialize = function() {
 }
 
 
-///
-/// Region shape : polygon
-///
 function nc_region_polygon() {
   this.is_inside  = nc_region_polygon.prototype.is_inside;
   this.is_on_edge = nc_region_polygon.prototype.is_on_edge;
@@ -6541,9 +6497,6 @@ nc_region_polygon.prototype.initialize = function() {
   this.recompute_svg = true;
 }
 
-///
-/// Region shape : point
-///
 function nc_region_point() {
   this.is_inside  = nc_region_point.prototype.is_inside;
   this.is_on_edge = nc_region_point.prototype.is_on_edge;
@@ -6629,7 +6582,7 @@ function nc_show_img(img_index) {
 
 function nc_buffer_hide_current_image() {
   img_fn_list_ith_entry_selected(nc_image_index, false);
-  nc_clear_reg_canvas(); // clear old region shapes
+  nc_clear_reg_canvas(); // clear old shapes
   if ( nc_current_image ) {
     nc_current_image.classList.remove('visible');
   }
@@ -7394,21 +7347,6 @@ function generate_img_index_list(input) {
 
   var intersect = array_intersect(all_img_index_list);
   return intersect;
-}
-
-if ( ! nc_is_debug_mode ) {
-  // warn user of possible loss of data
-  window.onbeforeunload = function (e) {
-    e = e || window.event;
-
-    // For IE and Firefox prior to version 4
-    if (e) {
-      e.returnValue = 'Did you save your data?';
-    }
-
-    // For Safari
-    return 'Did you save your data?';
-  };
 }
 
 //
