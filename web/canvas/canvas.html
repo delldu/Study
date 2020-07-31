@@ -97,7 +97,6 @@ button.leftsidebar_accordion.active:after { content: '\2796'; }
 .button_panel .button { display:inline-block; padding:0.35rem 0.5rem; margin:0 0.05rem; cursor:pointer; background-color:#cccccc; border-radius:0.2rem; -moz-user-select:none; -webkit-user-select:none; -ms-user-select:none; }
 .button_panel .button:hover { background-color:black; color:white; }
 
-
 /* overlay panel used to gather user inputs before invoking a function using invoke_with_user_inputs() */
 #user_input_panel { position:fixed; display:none; width:100%; height:100%; top:0; left:0; right:0; bottom:0; background-color: rgba(0,0,0,0.6); z-index:1002; }
 #user_input_panel .content { position:fixed; background-color:white; top:50%; left:50%; transform:translate(-50%,-50%);  -webkit-transform: translate(-50%, -50%); -moz-transform: translate(-50%, -50%);  -o-transform: translate(-50%, -50%); -ms-transform: translate(-50%, -50%); padding:2rem 4rem;}
@@ -110,6 +109,33 @@ button.leftsidebar_accordion.active:after { content: '\2796'; }
 #user_input_panel .content .user_confirm .cancel { display:table-cell; width:48%; }
 #user_input_panel .content .warning { color:red; }
 
+/* Attribute editor */
+#annotation_editor_panel { position:fixed; display:none; width:100%; left:0; bottom:0; background-color:white; border-top:2px solid #cccccc; padding:0.2em 1em; overflow:auto; z-index:1001; box-shadow: 0 0 1em #cccccc;}
+#annotation_editor { display:table; margin-bottom:3em; border-collapse:collapse; font-size:inherit; position: absolute; background-color:white; }
+#annotation_editor .row { display:table-row; }
+#annotation_editor .highlight .col { background-color:#e6e6e6;}
+
+#annotation_editor .col { display:table-cell; padding:0.4em 0.6em; border:1px solid #000000; vertical-align:middle; font-size:inherit; }
+#annotation_editor .header { font-weight:bold; }
+#annotation_editor .id { font-weight:bold; }
+#annotation_editor .col input[type=checkbox] { vertical-align:middle; }
+#annotation_editor .col input[type=radio] { vertical-align:middle; font-size:inherit; }
+#annotation_editor .col label { vertical-align:middle; font-size:inherit; }
+#annotation_editor .col textarea { border:0.1em solid #cccccc; padding:0; margin:0; font-size:inherit; background-color:#ffffff; }
+#annotation_editor .col textarea:focus { border:0.1em dashed #cccccc; }
+#annotation_editor .col span { display:block; }
+#annotation_editor .col horizontal_container { display:inline-block; }
+
+#annotation_editor .col .img_options { display:inline; }
+#annotation_editor .col .img_options .imrow { display:block; }
+#annotation_editor .col .img_options span { display:inline-block; margin: 0.2rem 0.4rem;}
+#annotation_editor .col .img_options span img { height:4em; }
+#annotation_editor .col .img_options p { margin:0; padding:0; font-size:inherit; }
+#annotation_editor .col .img_options input[type=radio] { display:none; }
+#annotation_editor .col .img_options input[type=radio] + label { display:block; cursor:pointer; text-align:center;}
+#annotation_editor .col .img_options input[type=radio]:checked + label { border: 0.1em solid black; background-color:#cccccc; cursor:default; font-size:inherit; }
+
+/* Project */
 #project_info_panel      { display:table; border-collapse:collapse; font-size:0.8rem; }
 #project_info_panel .row { display:table-row; }
 #project_info_panel .col { display:table-cell; padding:0.4rem 0.1rem; border:none;  }
@@ -265,6 +291,12 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     <div id="message_panel">
         <div id="message_panel_content" class="content"></div>
     </div>
+
+    <!-- spreadsheet like editor for annotations -->
+    <div id="annotation_editor_panel">
+      <!-- here, a child div with id="annotation_editor" is added by javascript -->
+    </div>
+
     <div class="top_panel" id="ui_top_panel">
         <!-- menu bar -->
         <div class="menubar">
@@ -755,6 +787,14 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     // message
     var nc_message_clear_timer;
 
+    // attributes
+    var nc_attribute_being_updated       = 'region'; // {region, file}
+    var nc_attributes                    = {"region":{"name":{"type":"text","description":"Name of the object","default_value":"not_defined"},"type":{"type":"dropdown","description":"Category of object","options":{"bird":"Bird","human":"Human","cup":"Cup (object)","unknown":"Unknown (object)"},"default_options":{"unknown":true}},"image_quality":{"type":"checkbox","description":"Quality of image region","options":{"blur":"Blurred region","good_illumination":"Good Illumination","frontal":"Object in Frontal View"},"default_options":{"good":true,"frontal":true,"good_illumination":true}}},"file":{"caption":{"type":"text","description":"","default_value":""},"public_domain":{"type":"radio","description":"","options":{"yes":"Yes","no":"No"},"default_options":{"no":true}},"image_url":{"type":"text","description":"","default_value":""}}}
+
+
+    // var nc_attributes                    = { 'region':{}, 'file':{} };
+    var nc_current_attribute_id          = '';
+
     // region group color, xxxx9999
     var nc_canvas_regions_group_color = {}; // color of each region
 
@@ -765,6 +805,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
     // annotation editor
     var nc_metadata_being_updated = 'region'; // {region, file}
+    var nc_annotaion_editor_panel  = document.getElementById('annotation_editor_panel');
 
     // persistence to local storage
     var nc_is_local_storage_available = false;
@@ -781,7 +822,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     var nc_image_filename_list = []; // array of all image filename
     var nc_image_load_error = []; // {true, false}
 
-    var nc_reload_img_fn_list_table = true;
+    // xxxx3333
     var nc_img_fn_list_img_index_list = []; // image index list of images show in img_fn_list
     var nc_img_fn_list_html = []; // html representation of image filename list
 
@@ -789,8 +830,9 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     var image_grid_panel = document.getElementById('image_grid_panel');
     var nc_display_area_content_name = ''; // describes what is currently shown in display area
     var nc_display_area_content_name_prev = '';
-    var nc_image_grid_requires_update = false;
-    var nc_image_grid_content_overflow = false;
+    // xxxx3333
+    // var nc_image_grid_requires_update = false;
+    // var nc_image_grid_content_overflow = false;
     var nc_image_grid_load_ongoing = false;
     var nc_image_grid_page_first_index = 0; // array index in nc_img_fn_list_img_index_list[]
     var nc_image_grid_page_last_index = -1;
@@ -821,10 +863,11 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
     nc_settings.ui.image_grid = {};
     nc_settings.ui.image_grid.img_height = 80; // in pixel
-    nc_settings.ui.image_grid.shape_fill = 'none';
-    nc_settings.ui.image_grid.shape_fill_opacity = 0.3;
-    nc_settings.ui.image_grid.shape_stroke = 'yellow'; // #ffff00
-    nc_settings.ui.image_grid.shape_stroke_width = 1;
+    // xxxx3333
+    // nc_settings.ui.image_grid.shape_fill = 'none';
+    // nc_settings.ui.image_grid.shape_fill_opacity = 0.3;
+    // nc_settings.ui.image_grid.shape_stroke = 'yellow'; // #ffff00
+    // nc_settings.ui.image_grid.shape_stroke_width = 1;
     nc_settings.ui.image_grid.show_image_policy = 'all';
 
     nc_settings.ui.image = {};
@@ -1507,6 +1550,8 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                         toggle_all_regions_selection(false);
                     }
                     set_region_select_state(nested_region_id, true);
+
+                    annotation_editor_show();
                 } else {
                     // user clicking inside an already selected region
                     // indicates that the user intends to draw a nested region
@@ -1905,6 +1950,8 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                     var new_region_id = n1 - 1;
 
                     select_only_region(new_region_id);
+
+                    annotation_editor_show();
                 }
                 nc_redraw_reg_canvas();
                 nc_reg_canvas.focus();
@@ -4495,6 +4542,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
     // this vertical spacer is needed to allow scrollbar to show
     // items like Keyboard Shortcut hidden under the attributes panel
+    // xxxx3333
     function update_vertical_space() {
         var panel = document.getElementById('vertical_space');
         // var aepanel = document.getElementById('annotation_editor_panel');
@@ -4803,7 +4851,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             if (nc_img_count > 0) {
                 nc_show_image(0);
                 update_file_list();
-                nc_reload_img_fn_list_table = true;
             }
             refresh_project_name();
         } else {
@@ -4862,7 +4909,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         } else {
             nc_show_image(img_index);
         }
-        nc_reload_img_fn_list_table = true;
         update_file_list();
         show_message('Removed file [' + input.filename.value + '] from project');
         user_input_default_cancel_handler();
@@ -7032,6 +7078,211 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             }
         }.bind(this));
     }
+
+// xxxx1111
+function annotation_editor_show() {
+  // remove existing annotation editor (if any)
+  annotation_editor_hide();
+
+  // create new container of annotation editor
+  var ae = document.createElement('div');
+  ae.setAttribute('id', 'annotation_editor');
+
+  // only display on-image annotation editor if
+  // - region attribute are defined
+  // - region is selected
+  // xxxx9999
+   // && Object.keys(nc_attributes['region']).length &&
+   //     nc_attributes['region'].constructor === Object 
+  if (nc_is_region_selected) {
+    ae.classList.add('force_small_font');
+    ae.classList.add('display_area_content'); // to enable automatic hiding of this content
+    // add annotation editor to image_panel
+      var html_position = get_lable_editor_position(nc_user_sel_region_id);
+      ae.style.top = html_position.top;
+      ae.style.left = html_position.left;
+
+    nc_display_area.appendChild(ae);
+    annotation_editor_update_content();
+    // update_vertical_space();
+  }
+}    
+
+// xxxx1111
+function annotation_editor_update_header_html() {
+  var head = document.createElement('div');
+  head.setAttribute('class', 'row');
+  head.setAttribute('id', 'annotation_editor_header');
+
+  var id_col = document.createElement('span');
+  id_col.setAttribute('class', 'col');
+  id_col.innerHTML = '';
+  head.appendChild(id_col);
+
+  // Second Column name
+  var label_col = document.createElement('span');
+  label_col.setAttribute('class', 'col header');
+  label_col.innerHTML = "Label";
+  head.appendChild(label_col);
+
+  var ae = document.getElementById('annotation_editor');
+  if ( ae.childNodes.length === 0 ) {
+    ae.appendChild(head);
+  } else {
+    if ( ae.firstChild.id === 'annotation_editor_header') {
+      ae.replaceChild(head, ae.firstChild);
+    } else {
+      // header node is absent
+      ae.insertBefore(head, ae.firstChild);
+    }
+  }
+}
+
+// xxxx1111
+function annotation_editor_update_content() {
+  return new Promise( function(ok_callback, err_callback) {
+    var ae = document.getElementById('annotation_editor');
+    if (ae ) {
+      ae.innerHTML = '';
+      annotation_editor_update_header_html();
+      annotation_editor_update_metadata_html(); // xxxx8888
+    }
+    ok_callback();
+  });
+}
+
+// xxxx1111
+function annotation_editor_update_metadata_html() {
+  if ( ! nc_img_count ) {
+    return;
+  }
+  var ae = document.getElementById('annotation_editor');
+  if ( nc_display_area_content_name === NC_DISPLAY_AREA_CONTENT_NAME.IMAGE ) {
+      ae.appendChild( annotation_editor_get_metadata_row_html(nc_user_sel_region_id) );
+  }
+}
+
+// xxxx1111
+function annotation_editor_get_metadata_row_html(row_id) {
+  var row = document.createElement('div');
+  row.setAttribute('class', 'row');
+  row.setAttribute('id', 'ae_region_' + row_id);
+
+  var id_col = document.createElement('span');
+  id_col.setAttribute('class', 'col id');
+  id_col.innerHTML = (row_id + 1);
+  row.appendChild(id_col);
+
+  var label_col = document.createElement('span');
+  label_col.setAttribute('class', 'col');
+
+  // Create select ...  
+  var attr_html_id = 'region__' + row_id;
+  var sel = document.createElement('select');
+  sel.setAttribute('id', attr_html_id);
+  sel.setAttribute('onchange', 'annotation_editor_on_metadata_update(this)');
+
+  var option_id;
+  var option_selected = false;
+  // xxxx5555
+  var option_set = "Dog, Cat, Flowers".split(", ");
+  var attr_value = 1; // Cat !!!
+
+  for ( option_id in option_set) {
+    var option_html_id = attr_html_id + '__' + option_id;
+    var option = document.createElement('option');
+    option.setAttribute('value', option_html_id);
+
+    if ( option_id === attr_value ) {
+      option.setAttribute('selected', 'selected');
+      option_selected = true;
+    }
+    option.innerHTML = option_set[option_id];
+    sel.appendChild(option);
+  }
+  if ( ! option_selected ) {
+    sel.selectedIndex = '-1';
+  }
+  label_col.appendChild(sel);
+
+  row.appendChild(label_col);
+  return row;
+}
+
+function get_lable_editor_position(region_id) {
+  var html_position = {};
+  var r = nc_canvas_regions[region_id]['shape_attributes'];
+  var shape = r['name'];
+  switch( shape ) {
+  case 'rect':
+    html_position.top = r['y'] + r['height'];
+    html_position.left = r['x'] + r['width'];
+    break;
+  case 'circle':
+    html_position.top = r['cy'] + r['r'];
+    html_position.left = r['cx'];
+    break;
+  case 'ellipse':
+    html_position.top = r['cy'] + r['ry'] * Math.cos(r['theta']);
+    html_position.left = r['cx'] - r['ry'] * Math.sin(r['theta']);
+    break;
+  case 'polygon':
+  case 'polyline':
+    var most_left =
+      Object.keys(r['all_points_x']).reduce(function(a, b){
+        return r['all_points_x'][a] > r['all_points_x'][b] ? a : b });
+    html_position.top  = Math.max( r['all_points_y'][most_left] );
+    html_position.left = Math.max( r['all_points_x'][most_left] );
+    break;
+  case 'point':
+    html_position.top = r['cy'];
+    html_position.left = r['cx'];
+    break;
+  }
+  html_position.top  = html_position.top + nc_img_panel.offsetTop + NC_REGION_EDGE_TOL + 'px';
+  html_position.left = html_position.left + nc_img_panel.offsetLeft + NC_REGION_EDGE_TOL + 'px';
+  return html_position;
+}
+
+function annotation_editor_hide() {
+  var p = document.getElementById('annotation_editor');
+  if ( p ) {
+    p.remove();
+  }
+}
+
+// invoked when the user updates annotations using the annotation editor
+function annotation_editor_on_metadata_update(p) {
+  var pid = annotation_editor_extract_html_id_components(p.value);
+  // row_id = 4 -- attr = region -- option_id = 2
+  // xxxx1111
+  annotation_editor_hide();
+  nc_redraw_reg_canvas();
+}
+
+function annotation_editor_extract_html_id_components(html_id) {
+  var parts = html_id.split('__');
+  var parsed_id = {};
+  switch( parts.length ) {
+  case 3:
+    // html_id : attribute-id__row-id__option_id
+    parsed_id.attr_id = parts[0];
+    parsed_id.row_id  = parts[1];
+    parsed_id.option_id = parts[2];
+    break;
+  case 2:
+    // html_id : attribute-id__row-id
+    parsed_id.attr_id = parts[0];
+    parsed_id.row_id  = parts[1];
+    break;
+  default:
+  }
+  return parsed_id;
+}
+
+
+
+
 
     // pts = [x0,y0,x1,y1,....]
     function polygon_to_bbox(pts) {
