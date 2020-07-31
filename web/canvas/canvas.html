@@ -291,12 +291,10 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     <div id="message_panel">
         <div id="message_panel_content" class="content"></div>
     </div>
-
     <!-- spreadsheet like editor for annotations -->
     <div id="annotation_editor_panel">
-      <!-- here, a child div with id="annotation_editor" is added by javascript -->
+        <!-- here, a child div with id="annotation_editor" is added by javascript -->
     </div>
-
     <div class="top_panel" id="ui_top_panel">
         <!-- menu bar -->
         <div class="menubar">
@@ -434,14 +432,16 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 </ul>
                 <div id="region_info" class="display_none">&nbsp;</div>
             </div>
-            <!--Color -->
+            <!--Color-->
             <button class="leftsidebar_accordion active">Color</button>
+            <!-- xxxx1111
+ -->
             <div class="leftsidebar_accordion_panel show">
                 <input type="color" id="region_color" value="#18E000" class="selected" title="Color Picker" onchange="select_color(this.value)">
             </div>
             <!-- Project -->
             <button class="leftsidebar_accordion active" id="project_panel_title">Project</button>
-            <div class="leftsidebar_accordion_panel show" id="img_fn_list_panel">
+            <div class="leftsidebar_accordion_panel show" id="file_list_panel">
                 <div id="project_info_panel">
                     <div class="row">
                         <span class="col"><label for="project_name">Name: </label></span>
@@ -456,7 +456,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                             <option value="files_error_loading">Files that could not be loaded</option>
                             <option value="regex">Regular Expression</option>
                         </select>
-                        <input style="width:50%" type="text" placeholder="regular expression" oninput="file_list_onregex()" id="img_fn_list_regex" title="Filter using regular expression">
+                        <input style="width:50%" type="text" placeholder="regular expression" oninput="file_list_onregex()" id="file_list_regex" title="Filter using regular expression">
                     </div>
                 </div>
                 <div id="img_fn_list"></div>
@@ -514,11 +514,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 </table>
                 <div style="display:block; text-align:center; padding:1rem;">Always Available</div>
                 <table>
-                    <!-- xxxx9999            <tr>
-              <td style="width:8em;"><span class="key">&larr;</span>&nbsp;<span class="key">&rarr;</span></td>
-              <td>Move to next/previous image</td>
-            </tr>
- -->
                     <tr>
                         <td><span class="key">+</span>&nbsp;<span class="key">-</span>&nbsp;<span class="key">=</span></td>
                         <td>Zoom in/out/reset</td>
@@ -658,9 +653,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         </div> <!-- end of page_about -->
     </div> <!-- end of display_area -->
     </div> <!-- end of middle_panel -->
-    <!-- this vertical spacer is needed to allow scrollbar to show
-         items like Keyboard Shortcut hidden under the attributes panel -->
-    <div style="width: 100%;" id="vertical_space"></div>
     <!-- START: Contents js-->
     <script>
     "use strict";
@@ -696,6 +688,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     var NC_POLYGON_RESIZE_VERTEX_OFFSET = 100;
     var NC_CANVAS_DEFAULT_ZOOM_LEVEL_INDEX = 3;
     var NC_CANVAS_ZOOM_LEVELS = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4, 5, 6, 7, 8, 9, 10];
+
     // xxxx9999
     var NC_REGION_COLOR_LIST = ["#E69F00", "#56B4E9", "#009E73", "#D55E00", "#CC79A7", "#F0E442", "#ffffff"];
     // radius of control points in all shapes
@@ -731,11 +724,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     var nc_current_image_width;
     var nc_current_image_height;
 
-    // a record of image statistics (e.g. width, height)
-    var nc_img_stat = {};
-    var nc_is_all_img_stat_read_ongoing = false;
-    var nc_img_stat_current_img_index = false;
-
     // image canvas
     var nc_display_area = document.getElementById('display_area');
     var nc_img_panel = document.getElementById('image_panel');
@@ -767,7 +755,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
     // region
     var nc_current_shape = NC_REGION_SHAPE.RECT;
-    var nc_current_color = "#ffff00";
+    var nc_current_color = "#ffff00"; // xxxx1111
     var nc_current_polygon_region_id = -1;
     var nc_user_sel_region_id = -1;
     var nc_click_x0 = 0;
@@ -782,21 +770,9 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     // region copy/paste
     var nc_region_selected_flag = []; // region select flag for current image
     var nc_copied_image_regions = [];
-    var nc_paste_to_multiple_images_input;
 
     // message
     var nc_message_clear_timer;
-
-    // attributes
-    var nc_attribute_being_updated       = 'region'; // {region, file}
-    var nc_attributes                    = {"region":{"name":{"type":"text","description":"Name of the object","default_value":"not_defined"},"type":{"type":"dropdown","description":"Category of object","options":{"bird":"Bird","human":"Human","cup":"Cup (object)","unknown":"Unknown (object)"},"default_options":{"unknown":true}},"image_quality":{"type":"checkbox","description":"Quality of image region","options":{"blur":"Blurred region","good_illumination":"Good Illumination","frontal":"Object in Frontal View"},"default_options":{"good":true,"frontal":true,"good_illumination":true}}},"file":{"caption":{"type":"text","description":"","default_value":""},"public_domain":{"type":"radio","description":"","options":{"yes":"Yes","no":"No"},"default_options":{"no":true}},"image_url":{"type":"text","description":"","default_value":""}}}
-
-
-    // var nc_attributes                    = { 'region':{}, 'file':{} };
-    var nc_current_attribute_id          = '';
-
-    // region group color, xxxx9999
-    var nc_canvas_regions_group_color = {}; // color of each region
 
     // invoke a method after receiving user input
     var nc_user_input_ok_handler = null;
@@ -804,12 +780,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     var nc_user_input_data = {};
 
     // annotation editor
-    var nc_metadata_being_updated = 'region'; // {region, file}
-    var nc_annotaion_editor_panel  = document.getElementById('annotation_editor_panel');
-
-    // persistence to local storage
-    var nc_is_local_storage_available = false;
-    var nc_is_save_ongoing = false;
+    var nc_annotaion_editor_panel = document.getElementById('annotation_editor_panel');
 
     // all the image_id and image_filename of images added by the user is
     // stored in nc_image_id_list and nc_image_filename_list
@@ -818,21 +789,18 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     // currently accessible by the user. The img_fn_list is visible in the
     // left side toolbar. image_grid, next/prev, etc operations depend on
     // the contents of nc_img_fn_list_img_index_list.
+
     var nc_image_id_list = []; // array of all image id (in order they were added by user)
     var nc_image_filename_list = []; // array of all image filename
     var nc_image_load_error = []; // {true, false}
-
-    // xxxx3333
-    var nc_img_fn_list_img_index_list = []; // image index list of images show in img_fn_list
     var nc_img_fn_list_html = []; // html representation of image filename list
+    var nc_img_fn_list_img_index_list = [];
 
     // image grid
     var image_grid_panel = document.getElementById('image_grid_panel');
     var nc_display_area_content_name = ''; // describes what is currently shown in display area
     var nc_display_area_content_name_prev = '';
-    // xxxx3333
-    // var nc_image_grid_requires_update = false;
-    // var nc_image_grid_content_overflow = false;
+
     var nc_image_grid_load_ongoing = false;
     var nc_image_grid_page_first_index = 0; // array index in nc_img_fn_list_img_index_list[]
     var nc_image_grid_page_last_index = -1;
@@ -863,11 +831,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
     nc_settings.ui.image_grid = {};
     nc_settings.ui.image_grid.img_height = 80; // in pixel
-    // xxxx3333
-    // nc_settings.ui.image_grid.shape_fill = 'none';
-    // nc_settings.ui.image_grid.shape_fill_opacity = 0.3;
-    // nc_settings.ui.image_grid.shape_stroke = 'yellow'; // #ffff00
-    // nc_settings.ui.image_grid.shape_stroke_width = 1;
     nc_settings.ui.image_grid.show_image_policy = 'all';
 
     nc_settings.ui.image = {};
@@ -887,7 +850,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     var img_buffer_now = document.getElementById("img_buffer_now");
 
 
-    var img_fn_list_panel = document.getElementById('img_fn_list_panel');
+    var file_list_panel = document.getElementById('file_list_panel');
     var img_fn_list = document.getElementById('img_fn_list');
     var leftsidebar = document.getElementById('leftsidebar');
 
@@ -986,6 +949,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     }
 
     function select_color(value) {
+        // xxxx1111
         nc_current_color = value;
     }
 
@@ -1084,7 +1048,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             image_grid_toolbar_update_group_by_select();
 
             if (nc_image_grid_group_var.length === 0) {
-                image_grid_show_all_project_images();
+                image_grid_show_all_images();
             }
         } else {
             set_display_area_content(NC_DISPLAY_AREA_CONTENT_NAME.PAGE_START_INFO);
@@ -1260,23 +1224,8 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         }, timeout);
     }
 
-    // xxxx9999
-    function nc_regions_group_color_init() {
-        nc_canvas_regions_group_color = {};
-        var aid = nc_settings.ui.image.region_color;
-        if (aid !== '_nc_default_region_color__') {
-            var color_index = 0;
-            for (avalue in nc_canvas_regions_group_color) {
-                nc_canvas_regions_group_color[avalue] = NC_REGION_COLOR_LIST[color_index % NC_REGION_COLOR_LIST.length];
-                color_index = color_index + 1;
-            }
-        }
-    }
-
     // transform regions in image space to canvas space, xxxx9999
     function nc_load_canvas_regions() {
-        nc_regions_group_color_init();
-
         // load all existing annotations into nc_canvas_regions
         var regions = nc_img_metadata[nc_image_id].regions;
         nc_canvas_regions = [];
@@ -1444,14 +1393,14 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         }.bind(this));
     }
 
-    // enter annotation mode on double click, xxxx9999
+    // enter annotation mode on double click
     function nc_reg_canvas_dblclick_handler(e) {
         e.stopPropagation();
         // xxxx9999
         // @todo: use double click in future
     }
 
-    // user clicks on the canvas
+    // user clicks on the canvas, mousedown
     function nc_reg_canvas_mousedown_handler(e) {
         e.stopPropagation();
         nc_click_x0 = e.offsetX;
@@ -1483,6 +1432,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 if (region_id === -1) {
                     // mousedown on outside any region
                     nc_is_user_drawing_region = true;
+
                     // unselect all regions
                     nc_is_region_selected = false;
                     nc_user_sel_region_id = -1;
@@ -1503,6 +1453,10 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 // this could lead to (1) region selection or (2) region drawing
                 nc_is_user_drawing_region = true;
             }
+        }
+
+        if (nc_is_user_drawing_region) {
+            annotation_editor_hide();
         }
     }
 
@@ -2476,9 +2430,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         return true;
     }
 
-    //
     // Canvas update routines
-    //
     function nc_redraw_reg_canvas() {
         if (nc_current_image_loaded) {
             nc_reg_ctx.clearRect(0, 0, nc_reg_canvas.width, nc_reg_canvas.height);
@@ -3455,9 +3407,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         }
     }
 
-    //
     // Shortcut key handlers
-    //
     function nc_window_keydown_handler(e) {
         if (e.target === document.body) {
             // process the keyboard event
@@ -3496,21 +3446,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             e.preventDefault();
             return;
         }
-
-        // xxxx9999
-        if (e.key === 'ArrowUp') {
-            region_visualisation_update('region_label', '_nc_region_id__', 1);
-            e.preventDefault();
-            return;
-        }
-
-        // xxxx9999
-        if (e.key === 'ArrowDown') {
-            region_visualisation_update('region_color', '_nc_default_region_color__', -1);
-            e.preventDefault();
-            return;
-        }
-
 
         if (e.key === 'Home') {
             show_first_image();
@@ -3702,13 +3637,11 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
             var npts = nc_canvas_regions[new_region_id].shape_attributes['all_points_x'].length;
             if (npts <= 2 && new_region_shape === NC_REGION_SHAPE.POLYGON) {
-                show_message('For a polygon, you must define at least 3 points. ' +
-                    'Press [Esc] to cancel drawing operation.!');
+                show_message('For a polygon, you must define at least 3 points. Press [Esc] to cancel drawing operation.!');
                 return;
             }
             if (npts <= 1 && new_region_shape === NC_REGION_SHAPE.POLYLINE) {
-                show_message('A polyline must have at least 2 points. ' +
-                    'Press [Esc] to cancel drawing operation.!');
+                show_message('A polyline must have at least 2 points. Press [Esc] to cancel drawing operation.!');
                 return;
             }
 
@@ -3817,6 +3750,10 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             nc_clear_reg_canvas();
         } else {
             nc_redraw_reg_canvas();
+        }
+
+        if (del_region_count > 0) {
+            annotation_editor_hide();
         }
         nc_reg_canvas.focus();
 
@@ -4098,7 +4035,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         nc_load_canvas_regions(); // image to canvas space transform
         nc_redraw_reg_canvas();
         nc_reg_canvas.focus();
-        update_vertical_space();
     }
 
     function reset_zoom() {
@@ -4119,7 +4055,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         } else {
             show_message('Cannot reset zoom because image zoom has not been applied!');
         }
-        update_vertical_space();
     }
 
     function zoom_in() {
@@ -4143,7 +4078,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         } else {
             var new_zoom_level_index = nc_canvas_zoom_level_index + 1;
             set_zoom(new_zoom_level_index);
-            show_message('Zoomed in to level ' + NC_CANVAS_ZOOM_LEVELS[nc_canvas_zoom_level_index] + 'X');
+            show_message('Zoomed in to ' + NC_CANVAS_ZOOM_LEVELS[nc_canvas_zoom_level_index] + 'X');
         }
     }
 
@@ -4215,41 +4150,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         }
     }
 
-    function region_visualisation_update(type, default_id, next_offset) {
-        var attr_list = [default_id];
-        var n = attr_list.length;
-        var current_index = attr_list.indexOf(nc_settings.ui.image[type]);
-        var new_index;
-        if (current_index !== -1) {
-            new_index = current_index + next_offset;
-
-            if (new_index < 0) {
-                new_index = n + new_index;
-            }
-            if (new_index >= n) {
-                new_index = new_index - n;
-            }
-            switch (type) {
-                case 'region_label':
-                    nc_settings.ui.image.region_label = attr_list[new_index];
-                    nc_redraw_reg_canvas();
-                    break;
-                case 'region_color':
-                    nc_settings.ui.image.region_color = attr_list[new_index];
-                    nc_regions_group_color_init();
-                    nc_redraw_reg_canvas();
-            }
-
-            var type_str = type.replace('_', ' ');
-            if (nc_settings.ui.image[type].startsWith('__nc')) {
-                show_message(type_str + ' cleared');
-            } else {
-                show_message(type_str + ' set to region attribute [' + nc_settings.ui.image[type] + ']');
-            }
-        }
-    }
-
-
     // left sidebar toolbox maintainer
     function leftsidebar_toggle() {
         var leftsidebar = document.getElementById('leftsidebar');
@@ -4300,7 +4200,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         var i;
         for (i = 0; i < acc.length; ++i) {
             acc[i].addEventListener('click', function() {
-                update_vertical_space();
                 this.classList.toggle('active');
                 this.nextElementSibling.classList.toggle('show');
 
@@ -4314,8 +4213,8 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     }
 
     // image filename list shown in leftsidebar panel
-    function is_img_fn_list_visible() {
-        return img_fn_list_panel.classList.contains('show');
+    function is_file_list_visible() {
+        return file_list_panel.classList.contains('show');
     }
 
     function img_loading_spinbar(image_index, show) {
@@ -4328,7 +4227,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     }
 
     function update_file_list() {
-        var regex = document.getElementById('img_fn_list_regex').value;
+        var regex = document.getElementById('file_list_regex').value;
         var p = document.getElementById('filelist_preset_filters_list');
         if (regex === '' || regex === null) {
             if (p.selectedIndex === 0) {
@@ -4355,7 +4254,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     }
 
     function file_list_onregex() {
-        var regex = document.getElementById('img_fn_list_regex').value;
+        var regex = document.getElementById('file_list_regex').value;
         file_list_generate_html(regex);
         img_fn_list.innerHTML = nc_img_fn_list_html.join('');
         file_list_scroll_to_current_file();
@@ -4380,13 +4279,13 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         var filter = p.options[p.selectedIndex].value;
         switch (filter) {
             case 'all':
-                document.getElementById('img_fn_list_regex').value = '';
+                document.getElementById('file_list_regex').value = '';
                 file_list_generate_html();
                 img_fn_list.innerHTML = nc_img_fn_list_html.join('');
                 file_list_scroll_to_current_file();
                 break;
             case 'regex':
-                document.getElementById('img_fn_list_regex').focus();
+                document.getElementById('file_list_regex').focus();
                 break;
             default:
                 nc_img_fn_list_html = [];
@@ -4419,7 +4318,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         }
     }
 
-    function img_fn_list_ith_entry_selected(img_index, is_selected) {
+    function file_list_ith_entry_selected(img_index, is_selected) {
         if (is_selected) {
             file_list_ith_entry_add_css_class(img_index, 'sel');
         } else {
@@ -4515,10 +4414,10 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     }
 
     function file_list_scroll_to_current_file() {
-        img_fn_list_scroll_to_file(nc_image_index);
+        file_list_scroll_to_file(nc_image_index);
     }
 
-    function img_fn_list_scroll_to_file(file_index) {
+    function file_list_scroll_to_file(file_index) {
         if (nc_img_fn_list_img_index_list.includes(file_index)) {
             var sel_file = document.getElementById('fl' + file_index);
             var panel_height = img_fn_list.clientHeight - 20;
@@ -4536,17 +4435,8 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
     function toggle_file_list_visibility() {
         leftsidebar_show();
-        document.getElementById('img_fn_list_panel').classList.toggle('show');
+        document.getElementById('file_list_panel').classList.toggle('show');
         document.getElementById('project_panel_title').classList.toggle('active');
-    }
-
-    // this vertical spacer is needed to allow scrollbar to show
-    // items like Keyboard Shortcut hidden under the attributes panel
-    // xxxx3333
-    function update_vertical_space() {
-        var panel = document.getElementById('vertical_space');
-        // var aepanel = document.getElementById('annotation_editor_panel');
-        // panel.style.height = (aepanel.offsetHeight + 40) + 'px';
     }
 
     // invoke a method after receiving inputs from user
@@ -4727,7 +4617,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             nc_settings.project = {};
         }
 
-        project_set_name(project_get_default_project_name());
+        project_set_name(get_default_project_name());
     }
 
     function change_project_name(p) {
@@ -4743,7 +4633,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         return num;
     }
 
-    function project_get_default_project_name() {
+    function get_default_project_name() {
         const now = new Date();
         var ts = now.getFullYear() + number_padding_with_zeros(now.getMonth() + 1, 2) + number_padding_with_zeros(now.getDate(), 2) +
             '_' + number_padding_with_zeros(now.getHours(), 2) + number_padding_with_zeros(now.getMinutes(), 2);
@@ -4757,7 +4647,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         var input = {
             'project_name': { type: 'text', name: 'Project Name', value: nc_settings.project.name, disabled: false, size: 30 },
             'save_annotations': { type: 'checkbox', name: 'Save region annotations (i.e. manual annotations)', checked: true, disabled: false },
-            'savenc_settings': { type: 'checkbox', name: 'Save application settings', checked: true },
+            'savenc_settings': { type: 'checkbox', name: 'Save settings', checked: true },
         };
 
         invoke_with_user_inputs(project_save_confirmed, input, config);
@@ -4994,7 +4884,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         if (nc_img_metadata) {
             var status_msg = 'Loaded ' + new_img_index_list.length + ' images.';
             if (discarded_file_count) {
-                status_msg += ' ( Discarded ' + discarded_file_count + ' non-image files! )';
+                status_msg += ' ( Discarded ' + discarded_file_count + ' non-image files ! )';
             }
             show_message(status_msg);
 
@@ -5022,7 +4912,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         nc_image_load_error[img_index] = false;
         file_list_ith_entry_error(img_index, false);
     }
-
 
     // image grid
     function image_grid_init() {
@@ -5061,7 +4950,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         }
     }
 
-    function image_grid_show_all_project_images() {
+    function image_grid_show_all_images() {
         var all_img_index_list = [];
         var i, n;
         //n = nc_image_id_list.length;
@@ -5215,17 +5104,17 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         var img_index = image_grid_parse_html_img_id(img.id);
         project_file_load_on_success(img_index);
 
-        image_grid_add_img_if_possible(img);
+        image_grid_add_image_if_possible(img);
     }
 
     function image_grid_on_img_error(e) {
         var img = e.target;
         var img_index = image_grid_parse_html_img_id(img.id);
         project_file_load_on_fail(img_index);
-        image_grid_add_img_if_possible(img);
+        image_grid_add_image_if_possible(img);
     }
 
-    function image_grid_add_img_if_possible(img) {
+    function image_grid_add_image_if_possible(img) {
         var img_index = image_grid_parse_html_img_id(img.id);
 
         var p = document.getElementById('image_grid_content_img');
@@ -5436,13 +5325,13 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     function image_grid_group_select_all() {
         image_grid_group_set_all_selection_state('select');
         image_grid_update_sel_count_html();
-        show_message('Selected all images in the current group');
+        show_message('Selected all images in current group');
     }
 
     function image_grid_group_select_none() {
         image_grid_group_set_all_selection_state('unselect');
         image_grid_update_sel_count_html();
-        show_message('Removed selection of all images in the current group');
+        show_message('Removed selection of all images in current group');
     }
 
     function image_grid_group_set_all_selection_state(state) {
@@ -5482,10 +5371,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         }
     }
 
-    function image_grid_get_html_region_id(img_index, region_id) {
-        return image_grid_get_html_img_id(img_index) + '_rs' + region_id;
-    }
-
     function image_grid_dblclick_handler(e) {
         nc_image_index = image_grid_parse_html_img_id(e.target.id);
         view_single_image();
@@ -5522,7 +5407,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
     function image_grid_onchange_group_by_select(p) {
         if (p.options[p.selectedIndex].value === '') {
-            image_grid_show_all_project_images();
+            image_grid_show_all_images();
             return;
         }
 
@@ -5642,7 +5527,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         var group_index = parseInt(p.parentNode.id.substr(prefix.length));
 
         if (group_index === 0) {
-            image_grid_show_all_project_images();
+            image_grid_show_all_images();
         } else {
             // merge all groups that are child of group_index
             image_grid_group_by_merge(nc_image_grid_group, 0, group_index);
@@ -5885,7 +5770,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         var n = nc_image_grid_group_var.length;
 
         if (n === 0) {
-            image_grid_show_all_project_images();
+            image_grid_show_all_images();
         } else {
             var group_img_index_list = [];
             var img_index_list = nc_image_grid_group;
@@ -6258,7 +6143,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     }
 
     function nc_buffer_hide_current_image() {
-        img_fn_list_ith_entry_selected(nc_image_index, false);
+        file_list_ith_entry_selected(nc_image_index, false);
         nc_clear_reg_canvas(); // clear old shapes
         if (nc_current_image) {
             nc_current_image.classList.remove('visible');
@@ -6345,7 +6230,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             set_display_area_content(NC_DISPLAY_AREA_CONTENT_NAME.IMAGE);
 
             // update img_fn_list
-            img_fn_list_ith_entry_selected(nc_image_index, true);
+            file_list_ith_entry_selected(nc_image_index, true);
             file_list_scroll_to_current_file();
 
             nc_load_canvas_regions(); // image to canvas space transform
@@ -6391,7 +6276,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 });
                 bimg.addEventListener('load', function() {
                     URL.revokeObjectURL(tmp_file_object_url);
-                    image_stat_set(img_index, [bimg.naturalWidth, bimg.naturalHeight]);
                     nc_img_panel.insertBefore(bimg, nc_reg_canvas);
                     project_file_load_on_success(img_index);
                     file_list_ith_entry_add_css_class(img_index, 'buffered')
@@ -6432,7 +6316,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 // Note: nc_current_image.{naturalWidth,naturalHeight} is only accessible after
                 // the "load" event. Therefore, all processing must happen inside this event handler.
                 bimg.addEventListener('load', function() {
-                    image_stat_set(img_index, [bimg.naturalWidth, bimg.naturalHeight]);
                     nc_img_panel.insertBefore(bimg, nc_reg_canvas);
 
                     project_file_load_on_success(img_index);
@@ -6744,12 +6627,12 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             'region_label': {
                 'default_option': '_nc_region_id__',
                 'default_label': 'Region id (1, 2, ...)',
-                'label_prefix': 'Show value of region attribute: ',
+                // 'label_prefix': 'Show value of region attribute: ',
             },
             'region_color': {
-                'default_option': '_nc_default_region_color__',
+                // 'default_option': '_nc_default_region_color__', // xxxx3333
                 'default_label': 'Default Region Colour',
-                'label_prefix': 'Based on value of region attribute: ',
+                // 'label_prefix': 'Based on value of region attribute: ',
             }
         };
 
@@ -6861,7 +6744,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         nc_image_index = img_index;
         nc_image_id = nc_image_id_list[nc_image_index];
         nc_current_image_loaded = false;
-        img_fn_list_ith_entry_selected(nc_image_index, true);
+        file_list_ith_entry_selected(nc_image_index, true);
 
         document.getElementById('page_404_filename').innerHTML = '[' + (nc_image_index + 1) + ']' + nc_img_metadata[nc_image_id].filename;
     }
@@ -7018,271 +6901,193 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         return intersect;
     }
 
-    // keep a record of image statistics (e.g. width, height, ...)
-    function image_stat_set(img_index, stat) {
-        if (stat.length) {
-            nc_img_stat[img_index] = stat;
-        } else {
-            delete nc_img_stat[img_index];
+    function annotation_editor_hide() {
+        var p = document.getElementById('annotation_editor');
+        if (p) {
+            p.remove();
         }
     }
 
-    function image_stat_set_all() {
+    function annotation_editor_show() {
+        if (nc_is_region_selected) {
+            // remove existing annotation editor (if any)
+            annotation_editor_hide();
+
+            // create new container of annotation editor
+            var ae = document.createElement('div');
+            ae.setAttribute('id', 'annotation_editor');
+
+            ae.classList.add('force_small_font');
+            ae.classList.add('display_area_content'); // to enable automatic hiding of this content
+            // add annotation editor to image_panel
+            var html_position = get_annotation_editor_position(nc_user_sel_region_id);
+            ae.style.top = html_position.top;
+            ae.style.left = html_position.left;
+
+            nc_display_area.appendChild(ae);
+            create_annotation_editor_content();
+        }
+    }
+
+    function annotation_editor_header_html() {
+        // index | Label
+        var head = document.createElement('div');
+        head.setAttribute('class', 'row');
+        head.setAttribute('id', 'annotation_editor_header');
+
+        var id_col = document.createElement('span');
+        id_col.setAttribute('class', 'col');
+        id_col.innerHTML = 'Index';
+        head.appendChild(id_col);
+
+        var label_col = document.createElement('span');
+        label_col.setAttribute('class', 'col header');
+        label_col.innerHTML = "Label";
+        head.appendChild(label_col);
+
+        var ae = document.getElementById('annotation_editor');
+        if (ae.childNodes.length === 0) {
+            ae.appendChild(head);
+        } else {
+            if (ae.firstChild.id === 'annotation_editor_header') {
+                ae.replaceChild(head, ae.firstChild);
+            } else { // header node is absent
+                ae.insertBefore(head, ae.firstChild);
+            }
+        }
+    }
+
+    function create_annotation_editor_content() {
         return new Promise(function(ok_callback, err_callback) {
-            var promise_list = [];
-            var img_id;
-            for (var img_index in nc_image_id_list) {
-                if (!nc_img_stat.hasOwnProperty(img_index)) {
-                    img_id = nc_image_id_list[img_index];
-                    promise_list.push(image_stat_get(img_index));
-                }
+            var ae = document.getElementById('annotation_editor');
+            if (ae) {
+                ae.innerHTML = '';
+                annotation_editor_header_html();
+                annotation_editor_metadata_html();
             }
-            if (promise_list.length) {
-                Promise.all(promise_list).then(function(ok) {
-                    ok_callback();
-                }.bind(this), function(err) {
-                    console.warn('Failed to read statistics of all images!');
-                    err_callback();
-                });
-            } else {
-                ok_callback();
+            ok_callback();
+        });
+    }
+
+    function annotation_editor_metadata_html() {
+        var ae = document.getElementById('annotation_editor');
+        if (nc_display_area_content_name === NC_DISPLAY_AREA_CONTENT_NAME.IMAGE) {
+            ae.appendChild(annotation_editor_metadata_row_html(nc_user_sel_region_id));
+        }
+    }
+
+    function annotation_editor_metadata_row_html(row_id) {
+        // Index == row_id + 1, Selector is created by project settings label list !
+        var row = document.createElement('div');
+        row.setAttribute('class', 'row');
+        row.setAttribute('id', 'ae_region_' + row_id);
+
+        var id_col = document.createElement('span');
+        id_col.setAttribute('class', 'col id');
+        id_col.innerHTML = (row_id + 1);
+        row.appendChild(id_col);
+
+        var label_col = document.createElement('span');
+        label_col.setAttribute('class', 'col');
+
+        // Create select ...  
+        var attr_html_id = 'region__' + row_id;
+        var sel = document.createElement('select');
+        sel.setAttribute('id', attr_html_id);
+        sel.setAttribute('onchange', 'annotation_editor_on_metadata_update(this)');
+
+        var option_id;
+        var option_selected = false;
+        // xxxx5555
+        var option_set = "Dog, Cat, Flowers".split(", ");
+        var attr_value = 1; // Cat !!!
+
+        for (option_id in option_set) {
+            var option_html_id = attr_html_id + '__' + option_id;
+            var option = document.createElement('option');
+            option.setAttribute('value', option_html_id);
+
+            if (option_id === attr_value) {
+                option.setAttribute('selected', 'selected');
+                option_selected = true;
             }
-        }.bind(this));
+            option.innerHTML = option_set[option_id];
+            sel.appendChild(option);
+        }
+        if (!option_selected) {
+            sel.selectedIndex = '-1';
+        }
+        label_col.appendChild(sel);
+
+        row.appendChild(label_col);
+        return row;
     }
 
-    function image_stat_get(img_index) {
-        return new Promise(function(ok_callback, err_callback) {
-            var img_id = nc_image_id_list[img_index];
-            var tmp_img = document.createElement('img');
-            var tmp_file_object_url = null;
-            tmp_img.addEventListener('load', function() {
-                nc_img_stat[img_index] = [tmp_img.naturalWidth, tmp_img.naturalHeight];
-                if (tmp_file_object_url !== null) {
-                    URL.revokeObjectURL(tmp_file_object_url);
-                }
-                ok_callback();
-            }.bind(this));
-            tmp_img.addEventListener('error', function() {
-                nc_img_stat[img_index] = [-1, -1];
-                if (tmp_file_object_url !== null) {
-                    URL.revokeObjectURL(tmp_file_object_url);
-                }
-                ok_callback();
-            }.bind(this));
-
-            if (nc_img_fileref[img_id] instanceof File) {
-                tmp_file_object_url = URL.createObjectURL(nc_img_fileref[img_id]);
-                tmp_img.src = tmp_file_object_url;
-            } else {
-                tmp_img.src = nc_img_src[img_id];
-            }
-        }.bind(this));
+    function get_annotation_editor_position(region_id) {
+        var html_position = {};
+        var r = nc_canvas_regions[region_id]['shape_attributes'];
+        var shape = r['name'];
+        switch (shape) {
+            case 'rect':
+                html_position.top = r['y'] + r['height'];
+                html_position.left = r['x'] + r['width'];
+                break;
+            case 'circle':
+                html_position.top = r['cy'] + r['r'];
+                html_position.left = r['cx'];
+                break;
+            case 'ellipse':
+                html_position.top = r['cy'] + r['ry'] * Math.cos(r['theta']);
+                html_position.left = r['cx'] - r['ry'] * Math.sin(r['theta']);
+                break;
+            case 'polygon':
+            case 'polyline':
+                var most_left =
+                    Object.keys(r['all_points_x']).reduce(function(a, b) {
+                        return r['all_points_x'][a] > r['all_points_x'][b] ? a : b
+                    });
+                html_position.top = Math.max(r['all_points_y'][most_left]);
+                html_position.left = Math.max(r['all_points_x'][most_left]);
+                break;
+            case 'point':
+                html_position.top = r['cy'];
+                html_position.left = r['cx'];
+                break;
+        }
+        html_position.top = html_position.top + nc_img_panel.offsetTop + NC_REGION_EDGE_TOL + 'px';
+        html_position.left = html_position.left + nc_img_panel.offsetLeft + NC_REGION_EDGE_TOL + 'px';
+        return html_position;
     }
 
-// xxxx1111
-function annotation_editor_show() {
-  // remove existing annotation editor (if any)
-  annotation_editor_hide();
-
-  // create new container of annotation editor
-  var ae = document.createElement('div');
-  ae.setAttribute('id', 'annotation_editor');
-
-  // only display on-image annotation editor if
-  // - region attribute are defined
-  // - region is selected
-  // xxxx9999
-   // && Object.keys(nc_attributes['region']).length &&
-   //     nc_attributes['region'].constructor === Object 
-  if (nc_is_region_selected) {
-    ae.classList.add('force_small_font');
-    ae.classList.add('display_area_content'); // to enable automatic hiding of this content
-    // add annotation editor to image_panel
-      var html_position = get_lable_editor_position(nc_user_sel_region_id);
-      ae.style.top = html_position.top;
-      ae.style.left = html_position.left;
-
-    nc_display_area.appendChild(ae);
-    annotation_editor_update_content();
-    // update_vertical_space();
-  }
-}    
-
-// xxxx1111
-function annotation_editor_update_header_html() {
-  var head = document.createElement('div');
-  head.setAttribute('class', 'row');
-  head.setAttribute('id', 'annotation_editor_header');
-
-  var id_col = document.createElement('span');
-  id_col.setAttribute('class', 'col');
-  id_col.innerHTML = '';
-  head.appendChild(id_col);
-
-  // Second Column name
-  var label_col = document.createElement('span');
-  label_col.setAttribute('class', 'col header');
-  label_col.innerHTML = "Label";
-  head.appendChild(label_col);
-
-  var ae = document.getElementById('annotation_editor');
-  if ( ae.childNodes.length === 0 ) {
-    ae.appendChild(head);
-  } else {
-    if ( ae.firstChild.id === 'annotation_editor_header') {
-      ae.replaceChild(head, ae.firstChild);
-    } else {
-      // header node is absent
-      ae.insertBefore(head, ae.firstChild);
+    // invoked when the user updates annotations using the annotation editor
+    function annotation_editor_on_metadata_update(p) {
+        var pid = annotation_editor_extract_html_id(p.value);
+        // row_id = 4 -- attr = region -- option_id = 2
+        // xxxx1111
+        // We need save some thing here !!!
+        annotation_editor_hide();
+        nc_redraw_reg_canvas();
     }
-  }
-}
 
-// xxxx1111
-function annotation_editor_update_content() {
-  return new Promise( function(ok_callback, err_callback) {
-    var ae = document.getElementById('annotation_editor');
-    if (ae ) {
-      ae.innerHTML = '';
-      annotation_editor_update_header_html();
-      annotation_editor_update_metadata_html(); // xxxx8888
+    function annotation_editor_extract_html_id(html_id) {
+        var parts = html_id.split('__');
+        var parsed_id = {};
+        switch (parts.length) {
+            case 3:
+                // html_id : attribute-id__row-id__option_id
+                parsed_id.attr_id = parts[0];
+                parsed_id.row_id = parts[1];
+                parsed_id.option_id = parts[2];
+                break;
+            case 2:
+                // html_id : attribute-id__row-id
+                parsed_id.attr_id = parts[0];
+                parsed_id.row_id = parts[1];
+                break;
+            default:
+        }
+        return parsed_id;
     }
-    ok_callback();
-  });
-}
-
-// xxxx1111
-function annotation_editor_update_metadata_html() {
-  if ( ! nc_img_count ) {
-    return;
-  }
-  var ae = document.getElementById('annotation_editor');
-  if ( nc_display_area_content_name === NC_DISPLAY_AREA_CONTENT_NAME.IMAGE ) {
-      ae.appendChild( annotation_editor_get_metadata_row_html(nc_user_sel_region_id) );
-  }
-}
-
-// xxxx1111
-function annotation_editor_get_metadata_row_html(row_id) {
-  var row = document.createElement('div');
-  row.setAttribute('class', 'row');
-  row.setAttribute('id', 'ae_region_' + row_id);
-
-  var id_col = document.createElement('span');
-  id_col.setAttribute('class', 'col id');
-  id_col.innerHTML = (row_id + 1);
-  row.appendChild(id_col);
-
-  var label_col = document.createElement('span');
-  label_col.setAttribute('class', 'col');
-
-  // Create select ...  
-  var attr_html_id = 'region__' + row_id;
-  var sel = document.createElement('select');
-  sel.setAttribute('id', attr_html_id);
-  sel.setAttribute('onchange', 'annotation_editor_on_metadata_update(this)');
-
-  var option_id;
-  var option_selected = false;
-  // xxxx5555
-  var option_set = "Dog, Cat, Flowers".split(", ");
-  var attr_value = 1; // Cat !!!
-
-  for ( option_id in option_set) {
-    var option_html_id = attr_html_id + '__' + option_id;
-    var option = document.createElement('option');
-    option.setAttribute('value', option_html_id);
-
-    if ( option_id === attr_value ) {
-      option.setAttribute('selected', 'selected');
-      option_selected = true;
-    }
-    option.innerHTML = option_set[option_id];
-    sel.appendChild(option);
-  }
-  if ( ! option_selected ) {
-    sel.selectedIndex = '-1';
-  }
-  label_col.appendChild(sel);
-
-  row.appendChild(label_col);
-  return row;
-}
-
-function get_lable_editor_position(region_id) {
-  var html_position = {};
-  var r = nc_canvas_regions[region_id]['shape_attributes'];
-  var shape = r['name'];
-  switch( shape ) {
-  case 'rect':
-    html_position.top = r['y'] + r['height'];
-    html_position.left = r['x'] + r['width'];
-    break;
-  case 'circle':
-    html_position.top = r['cy'] + r['r'];
-    html_position.left = r['cx'];
-    break;
-  case 'ellipse':
-    html_position.top = r['cy'] + r['ry'] * Math.cos(r['theta']);
-    html_position.left = r['cx'] - r['ry'] * Math.sin(r['theta']);
-    break;
-  case 'polygon':
-  case 'polyline':
-    var most_left =
-      Object.keys(r['all_points_x']).reduce(function(a, b){
-        return r['all_points_x'][a] > r['all_points_x'][b] ? a : b });
-    html_position.top  = Math.max( r['all_points_y'][most_left] );
-    html_position.left = Math.max( r['all_points_x'][most_left] );
-    break;
-  case 'point':
-    html_position.top = r['cy'];
-    html_position.left = r['cx'];
-    break;
-  }
-  html_position.top  = html_position.top + nc_img_panel.offsetTop + NC_REGION_EDGE_TOL + 'px';
-  html_position.left = html_position.left + nc_img_panel.offsetLeft + NC_REGION_EDGE_TOL + 'px';
-  return html_position;
-}
-
-function annotation_editor_hide() {
-  var p = document.getElementById('annotation_editor');
-  if ( p ) {
-    p.remove();
-  }
-}
-
-// invoked when the user updates annotations using the annotation editor
-function annotation_editor_on_metadata_update(p) {
-  var pid = annotation_editor_extract_html_id_components(p.value);
-  // row_id = 4 -- attr = region -- option_id = 2
-  // xxxx1111
-  annotation_editor_hide();
-  nc_redraw_reg_canvas();
-}
-
-function annotation_editor_extract_html_id_components(html_id) {
-  var parts = html_id.split('__');
-  var parsed_id = {};
-  switch( parts.length ) {
-  case 3:
-    // html_id : attribute-id__row-id__option_id
-    parsed_id.attr_id = parts[0];
-    parsed_id.row_id  = parts[1];
-    parsed_id.option_id = parts[2];
-    break;
-  case 2:
-    // html_id : attribute-id__row-id
-    parsed_id.attr_id = parts[0];
-    parsed_id.row_id  = parts[1];
-    break;
-  default:
-  }
-  return parsed_id;
-}
-
-
-
-
 
     // pts = [x0,y0,x1,y1,....]
     function polygon_to_bbox(pts) {
