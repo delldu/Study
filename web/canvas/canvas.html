@@ -1515,7 +1515,6 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                         toggle_all_regions_selection(false);
                     }
                     set_region_select_state(nested_region_id, true);
-
                     annotation_editor_show();
                 } else {
                     // user clicking inside an already selected region
@@ -1729,6 +1728,13 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                     }
                     set_region_select_state(region_id, true);
 
+                    // show annotation editor only when a single region is selected
+                    if ( !e.shiftKey ) {
+                      annotation_editor_show();
+                    } else {
+                      annotation_editor_hide();
+                    }                    
+
                     // show the region info
                     if (nc_is_region_info_visible) {
                         var canvas_attr = nc_canvas_regions[region_id].attributes;
@@ -1796,6 +1802,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                                 break;
                         }
                     }
+                    create_annotation_editor_content(); // xxxx1111
                 }
             }
             nc_redraw_reg_canvas();
@@ -3764,10 +3771,8 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
             nc_redraw_reg_canvas();
         }
 
-        if (del_region_count > 0) {
-            annotation_editor_hide();
-        }
         nc_reg_canvas.focus();
+        annotation_editor_show();
 
         show_message('Deleted ' + del_region_count + ' selected regions');
     }
@@ -7041,16 +7046,16 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         var shape = r['name'];
         switch (shape) {
             case 'rect':
-                html_position.top = r['y'] + r['height'];
-                html_position.left = r['x'] + r['width'];
+                html_position.top = r['y'] + parseInt(r['height']/2);
+                html_position.left = r['x'] + parseInt(r['width']/2);
                 break;
             case 'circle':
-                html_position.top = r['cy'] + r['r'];
+                html_position.top = r['cy']; //  + r['r'];
                 html_position.left = r['cx'];
                 break;
             case 'ellipse':
-                html_position.top = r['cy'] + r['ry'] * Math.cos(r['theta']);
-                html_position.left = r['cx'] - r['ry'] * Math.sin(r['theta']);
+                html_position.top = r['cy']; // + r['ry'] * Math.cos(r['theta']);
+                html_position.left = r['cx']; // - r['ry'] * Math.sin(r['theta']);
                 break;
             case 'polygon':
             case 'polyline':
