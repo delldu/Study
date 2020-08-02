@@ -302,7 +302,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 <li onclick="show_home_panel()" style="cursor:pointer;">Home</li>
                 <li>Project
                     <ul>
-                        <li onclick="settings_panel_toggle()" title="Show/edit project settings">Settings</li>
+                        <li onclick="settings_cancel()" title="Show/edit project settings">Settings</li>
                         <li class="submenu_divider"></li>
                         <li onclick="open_project_from_json_file()" title="Open a project (from a JSON file)">Open</li>
                         <li onclick="save_project_with_confirm()" title="Save project (as a JSON file)">Save</li>
@@ -643,7 +643,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 </div>
                 <div class="row" style="border:none;">
                     <button onclick="settings_save()" value="save_settings" style="margin-top:2rem">Save</button>
-                    <button onclick="settings_panel_toggle()" value="cancel_settings" style="margin-left:2rem;">Cancel</button>
+                    <button onclick="settings_cancel()" value="cancel_settings" style="margin-left:2rem;">Cancel</button>
                 </div>
             </div>
             <div id="page_start_info" class="display_area_content display_none narrow_page_content"></div>
@@ -3745,7 +3745,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         nc_user_sel_region_id = -1;
 
         if (del_region_count > 0) {
-          annotation_editor_hide();
+            annotation_editor_hide();
         }
 
         if (nc_canvas_regions.length === 0) {
@@ -4240,6 +4240,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 }
                 nc_img_fn_list_html.push('</ul>');
                 img_fn_list.innerHTML = nc_img_fn_list_html.join('');
+
                 file_list_scroll_to_current_file();
             } else {
                 // filter according to preset filters
@@ -4795,7 +4796,8 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
     function project_file_remove_confirmed(input) {
         var img_index = input.img_index.value - 1;
-        project_remove_file(img_index);
+
+        project_remove_one_file(img_index);
 
         if (img_index === nc_image_count) {
             if (nc_image_count === 0) {
@@ -4812,8 +4814,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         user_input_default_cancel_handler();
     }
 
-
-    function project_remove_file(img_index) {
+    function project_remove_one_file(img_index) {
         if (img_index < 0 || img_index >= nc_image_count) {
             console.log('project_remove_file(): invalid img_index ' + img_index);
             return;
@@ -6092,6 +6093,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     }
 
     // image buffering
+    // xxxx????
     function nc_cancel_current_image_loading() {
         var panel = document.getElementById('project_panel_title');
         panel.innerHTML = 'Project';
@@ -6538,7 +6540,7 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
     }
 
     // settings
-    function settings_panel_toggle() {
+    function settings_cancel() {
         if (nc_display_area_content_name === NC_DISPLAY_AREA_CONTENT_NAME.SETTINGS) {
             if (nc_display_area_content_name_prev !== '') {
                 set_display_area_content(nc_display_area_content_name_prev);
@@ -6547,13 +6549,9 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 nc_redraw_rleg_canvas();
             }
         } else {
-            settings_init();
+            settings_show_current_value();
             set_display_area_content(NC_DISPLAY_AREA_CONTENT_NAME.SETTINGS);
         }
-    }
-
-    function settings_init() {
-        settings_show_current_value();
     }
 
     function settings_save() {
@@ -6606,26 +6604,23 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
         refresh_region_color_picker();
 
         show_message('Settings saved.');
-        settings_panel_toggle();
+        settings_cancel();
     }
 
     function settings_show_current_value() {
         var p = document.getElementById('settings_panel');
         var vl = p.getElementsByClassName('value');
         var n = vl.length;
-        var i;
-        for (i = 0; i < n; ++i) {
+        for (var i = 0; i < n; ++i) {
             var s = vl[i].childNodes[1];
             var sid_parts = s.id.split('.');
             if (sid_parts[0] === 'nc_settings') {
                 var el = nc_settings;
                 var found = true;
-                var j;
-                for (j = 1; j < sid_parts.length; ++j) {
+                for (var j = 1; j < sid_parts.length; ++j) {
                     if (el.hasOwnProperty(sid_parts[j])) {
                         el = el[sid_parts[j]];
-                    } else {
-                        // unrecognized setting
+                    } else { // unrecognized setting
                         found = false;
                         break;
                     }
