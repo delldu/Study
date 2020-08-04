@@ -73,6 +73,7 @@ Install Guide
 	sudo docker pull pytorch/pytorch
 	6.1.4 --tensorflow docker images
 	# sudo docker pull tensorflow/tensorflow
+	---- https://ngc.nvidia.com/catalog/containers?orderBy=modifiedDESC&pageNumber=1&query=&quickFilter=&filters=
 	sudo docker pull nvcr.io/nvidia/tensorflow:20.02-tf2-py3
 
 
