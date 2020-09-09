@@ -13,6 +13,12 @@ Install Guide
 		1) pip install pycuda
 		2) install_tensor.sh
 
+	2.4 -- tensorrt inference server
+	sudo docker pull nvcr.io/nvidia/tensorrt:20.07.1-py3
+	sudo docker pull nvcr.io/nvidia/tensorrtserver:20.02-py3-clientsdk
+	sudo docker pull nvcr.io/nvidia/tensorrtserver:20.02-py3
+	sudo docker pull nvcr.io/nvidia/tritonserver:20.07-v1-py3
+
 3. apt applications:
 	3.1 --ffmpeg, vlc
 	sudo apt install ffmpeg vlc 
@@ -104,6 +110,11 @@ Install Guide
 	conda create --nane tensorflow
 	conda activate tensorflow
 	conda install tesorflow-gpu
+
+	6.2.3 -- deepstream
+	sudo ngc registry image pull nvidia/deepstream:5.0-20.07-triton
+	sudo docker pull nvcr.io/nvidia/tlt-streamanalytics:v2.0_py3
+	
 	
 	test:
 	import tensorflow as tf
