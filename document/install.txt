@@ -119,3 +119,8 @@ Install Guide
 	test:
 	import tensorflow as tf
 	print(tf.test.is_gpu_available())
+	
+7. Install virtualbox
+7.1 Search "SVM" in bios, change disable to enable
+7.2 Ubuntu 18.04: sudo apt install virtualbox
+7.3 Baidu search "win10 DVD ISO" and download
