@@ -2736,15 +2736,15 @@ ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
                 break;
 
             case 'ellipse':
-                let radians = d['theta'];
-                let radians90 = radians + Math.PI / 2;
-                let ux = d['rx'] * Math.cos(radians);
-                let uy = d['rx'] * Math.sin(radians);
-                let vx = d['ry'] * Math.cos(radians90);
-                let vy = d['ry'] * Math.sin(radians90);
+                var radians = d['theta'];
+                var radians90 = radians + Math.PI / 2;
+                var ux = d['rx'] * Math.cos(radians);
+                var uy = d['rx'] * Math.sin(radians);
+                var vx = d['ry'] * Math.cos(radians90);
+                var vy = d['ry'] * Math.sin(radians90);
 
-                let width = Math.sqrt(ux * ux + vx * vx) * 2;
-                let height = Math.sqrt(uy * uy + vy * vy) * 2;
+                var width = Math.sqrt(ux * ux + vx * vx) * 2;
+                var height = Math.sqrt(uy * uy + vy * vy) * 2;
 
                 bbox[0] = d['cx'] - (width / 2);
                 bbox[1] = d['cy'] - (height / 2);
