@@ -1,0 +1,61 @@
+#/************************************************************************************
+#***
+#***	Copyright 2019 Dell(18588220928@163.com), All Rights Reserved.
+#***
+#***	File Author: Dell, 2019-11-05 13:03:37
+#***
+#************************************************************************************/
+#
+#! /bin/sh
+
+usage()
+{
+	echo "Usage: $0 [options] commands"
+	echo "Options:"
+	echo "  --encode input output    Encode input(like temp/%3d.png) to output(like o.mp4)"
+	echo "  --decode input output    Decode input(like a.mp4) to output(like temp/%3d.png)"
+
+	exit 1
+}
+
+encode()
+{
+	[ "$1" = "" ] && usage
+	[ "$2" = "" ] && usage
+
+	# ffmpeg -i '%3d.png' -vcodec avc -c:v h264 -preset slow -crf 10 -vf format=yuv420p small.mp4
+	ffmpeg -i "$1" -vcodec avc -c:v h264 -preset slow -crf 11 -vf format=yuv420p "$2"
+
+	# Test results:
+	# crf == 10: hr PSNR = 43.00, Size = 70M
+	# crf == 11: hr PSNR = 42.75, Size = 58M ----------------------- Best < Size 60M
+	# crf == 12: hr PSNR = 42.49, Size = 49M 
+	# crf == 15: hr PSNR = 41.70, Size = 29M
+}
+
+
+decode()
+{
+	[ "$1" = "" ] && usage
+	[ "$2" = "" ] && usage
+	# ffmpeg -i lr.mp4 -q:v 2 %3d.png
+	ffmpeg -i "$1" -q:v 2 "$2"
+}
+
+[ "$*" = "" ] && usage
+
+case $1 in
+--enc*)
+	encode $2 $3
+	shift
+	shift
+	shift
+	;;
+--dec*)
+	decode $2 $3
+	shift
+	shift
+	shift
+	;;
+esac
+
