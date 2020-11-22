@@ -1,2 +1,6 @@
-indent -kr -i4 -l120 -ts 4 $1
+files="$*"
+for f in $files ; 
+do 
+	indent -kr -i4 -l120 -ts 4 "$f"
+done
 
