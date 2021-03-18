@@ -12,6 +12,7 @@ help()
 	echo "list      List files"
 	echo "remove    Remove file"
 	echo "push      Force push"
+	echo "clean     Clean "
 }
 
 list()
@@ -31,6 +32,13 @@ remove()
 	git filter-branch --force --index-filter \
 	"git rm --cached --ignore-unmatch ${unwanted_filename}" \
 	--prune-empty --tag-name-filter cat -- --all
+}
+
+clean()
+{
+	rm -Rf .git/refs/original
+	rm -Rf .git/logs/
+	git gc
 }
 
 push()
