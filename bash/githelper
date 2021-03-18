@@ -1,0 +1,47 @@
+#/************************************************************************************#***
+#***	Copyright Dell 2021, All Rights Reserved.
+#***
+#***	File Author: Dell, 2021年 03月 18日 星期四 14:33:03 CST
+#***
+#************************************************************************************/
+#
+#! /bin/sh
+
+help()
+{
+	echo "list      List files"
+	echo "remove    Remove file"
+	echo "push      Force push"
+}
+
+list()
+{
+	git rev-list --objects --all \
+	| git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' \
+	| awk '/^blob/ {print substr($0,6)}' \
+	| sort --numeric-sort --key=2 \
+	| cut --complement --characters=13-40 \
+	| numfmt --field=2 --to=iec-i --suffix=B --padding=7 --round=nearest
+}
+
+remove()
+{
+	unwanted_filename=$1
+
+	git filter-branch --force --index-filter \
+	"git rm --cached --ignore-unmatch ${unwanted_filename}" \
+	--prune-empty --tag-name-filter cat -- --all
+}
+
+push()
+{
+	git push origin --force --all
+}
+
+if [ "$*" == "" ] ;
+then
+	help
+else
+	eval "$*"
+fi
+
