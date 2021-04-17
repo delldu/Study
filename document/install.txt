@@ -1,3 +1,6 @@
+sudo dpkg --purge --force-all package
+
+
 ssh -f -N -D 127.0.0.1:1080 ubuntu@23.248.162.51
 google-chrome --proxy-server="socks://127.0.0.1:1080"
 git config --global http.proxy socks5://localhost:1080
