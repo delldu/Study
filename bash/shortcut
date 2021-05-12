@@ -1,0 +1,18 @@
+alias start_tvm='\
+	cd /home/dell/ZDisk/Workspace/abc/t/tvm; \
+	source activate pytorch; \
+	export PYTHONPATH=$PYTHONPATH:`pwd`; \
+	export PATH=/usr/local/cuda-10.2/bin:$PATH; \
+	export PS1="(tvm)\u@\H:\w$ " \
+'
+
+alias start_dev='\
+	cd /home/dell/ZDisk/Workspace/develop; \
+	source activate pytorch; \
+	export PATH=/usr/local/cuda-10.2/bin:$PATH; \
+	export PS1="(dev)\u@\H:\w$ " \
+'
+
+alias start_ssh='ssh -f -N -D 127.0.0.1:1080 ubuntu@23.248.162.51'
+alias start_google='google-chrome --proxy-server="socks://127.0.0.1:1080"'
+
