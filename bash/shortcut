@@ -1,5 +1,5 @@
 alias start_tvm='\
-	cd /home/dell/ZDisk/Workspace/abc/t/tvm; \
+	cd /home/dell/ZDisk/Workspace/abc/t/tvm/python; \
 	source activate pytorch; \
 	export PYTHONPATH=$PYTHONPATH:`pwd`; \
 	export PATH=/usr/local/cuda-10.2/bin:$PATH; \
