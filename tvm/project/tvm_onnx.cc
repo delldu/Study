@@ -41,6 +41,25 @@
 typedef tvm::runtime::Module TVM_Module;
 typedef tvm::runtime::NDArray TVM_Tensor;
 
+TENSOR *tensor_rpc(int socket, TENSOR * input, int reqcode)
+{
+	int rescode = -1;
+	TENSOR *output = NULL;
+
+	CHECK_TENSOR(input);
+
+	if (tensor_send(socket, reqcode, input) == RET_OK) {
+		output = tensor_recv(socket, &rescode);
+	}
+	if (rescode != reqcode) {
+		// Bad service response
+		syslog_error("Remote running service.");
+		tensor_destroy(output);
+		return NULL;
+	}
+	return output;
+}
+
 int server(char *endpoint, int use_gpu)
 {
 	std::vector < int64_t > input_shape;
@@ -100,8 +119,7 @@ int image_post(int socket, char *input_file)
     send_tensor = tensor_from_image(send_image, 0);
     check_tensor(send_tensor);
 
-    // eg: server limited: only accept 4 times tensor !!!
-    // xxxx8888 recv_tensor = ResizeOnnxRPC(socket, send_tensor, IMAGE_SERVICE_CODE, 4);
+    recv_tensor = tensor_rpc(socket, send_tensor, IMAGE_SERVICE_CODE);
     if (tensor_valid(recv_tensor)) {
       // SaveTensorAsImage(recv_tensor, input_file);
       tensor_destroy(recv_tensor);

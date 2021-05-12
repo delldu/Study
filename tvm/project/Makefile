@@ -20,9 +20,7 @@ INCS	:= $(shell ./tvmtool --cflags)
 LIBS	:= \
 		$(shell ./tvmtool --libs) \
 
-DEFINES := -std=c++14 -O2 -fPIC
-
-# -DDMLC_USE_LOGGING_LIBRARY=\<tvm/runtime/logging.h\>
+DEFINES := -std=c++14 -O2 -fPIC -DDMLC_USE_LOGGING_LIBRARY=\<tvm/runtime/logging.h\>
 
 
 CXXFLAGS := -O2 -fPIC -Wall -Wextra
