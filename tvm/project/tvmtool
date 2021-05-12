@@ -1,0 +1,51 @@
+#/************************************************************************************
+#***
+#***	Copyright 2021 Dell(18588220928g@163.com), All Rights Reserved.
+#***
+#***	File Author: Dell, 2021-02-06 22:47:03
+#***
+#************************************************************************************/
+#
+#! /bin/sh
+
+TVM_INSTALL_DIR=/home/dell/ZDisk/Workspace/abc/t/tvm
+
+usage()
+{
+	echo "Usage: $0 [options] commands"
+	echo "Options:"
+	echo "  --cflags        print the compiler flags that are necessary "
+	echo "  --libs          print the linker flags that are necessary"
+	exit 1
+}
+
+show_cflags()
+{
+	# -I${TVM_INSTALL_DIR} is for tvm_runtime.cc !!!
+
+	echo -n "-isystem${TVM_INSTALL_DIR}/include "
+	echo -n "-isystem${TVM_INSTALL_DIR}/3rdparty/dmlc-core/include "
+	echo -n "-isystem${TVM_INSTALL_DIR}/3rdparty/dlpack/include "
+	echo -n "-I${TVM_INSTALL_DIR} "
+	echo "-I/usr/local/include"
+}
+
+show_libs()
+{
+ 	echo "-L${TVM_INSTALL_DIR}/build -ltvm_runtime -ldl -pthread "
+ 	echo "-Wl,-Bstatic -lnimage -lnanomsg -lanl -lmsgpackc -ljpeg -lpng -lz -Wl,-Bdynamic -lpthread -lm"
+}
+
+[ "$*" = "" ] && usage
+
+
+case $1 in
+	--cflags)
+		show_cflags
+		;;
+	--libs)
+		show_libs
+		;;
+	*)
+		usage ;;
+esac

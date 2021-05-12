@@ -11,6 +11,7 @@ def deformable_conv2d_nchw
 
 atexit.register
 
+export TOPHUB_LOCATION=https://mirror.ghproxy.com/https://raw.githubusercontent.com/tlc-pack/tophub/main/tophub
 
 
 
