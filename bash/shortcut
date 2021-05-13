@@ -16,3 +16,4 @@ alias start_dev='\
 alias start_ssh='ssh -f -N -D 127.0.0.1:1080 ubuntu@23.248.162.51'
 alias start_google='google-chrome --proxy-server="socks://127.0.0.1:1080"'
 
+alias tvmc="python -m tvm.driver.tvmc"
