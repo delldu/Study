@@ -26,6 +26,7 @@
 #include <tvm/runtime/packed_func.h>
 #include <tvm/runtime/registry.h>
 #include <cstdio>
+#include <fstream> 
 
 #include <stdio.h>
 #include <unistd.h>
@@ -38,8 +39,69 @@
 #define IMAGE_SERVICE_URL "tcp://127.0.0.1:9001"
 #define IMAGE_SERVICE_CODE 0x90010000 
 
-typedef tvm::runtime::Module TVM_Module;
-typedef tvm::runtime::NDArray TVM_Tensor;
+// typedef int (*CustomSevice)(int socket, int service_code, TENSOR *input_tensor);
+typedef int (*CustomSevice)(int, int, TENSOR *);
+
+// Simple RuntimeEngine for prediction
+struct RuntimeEngine {
+	int use_gpu;
+	tvm::runtime::PackedFunc set_input;
+	tvm::runtime::PackedFunc run;
+	tvm::runtime::PackedFunc get_output;
+};
+
+void destroy_engine(RuntimeEngine *engine)
+{
+	if (engine)
+		delete engine;
+	engine = NULL;
+}
+
+RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *params_file_name, int use_gpu)
+{
+	RuntimeEngine *engine = NULL;
+
+	// load in the library
+	DLDevice dev {kDLCPU, 0};
+	tvm::runtime::Module mod_so = tvm::runtime::Module::LoadFromFile(so_file_name);
+
+	std::ifstream json_in(json_file_name, std::ios::in);
+	if(json_in.fail()) {
+		throw std::runtime_error("could not open json file");
+	}
+	std::string mod_json((std::istreambuf_iterator<char>(json_in)), std::istreambuf_iterator<char>());
+	json_in.close();
+
+	// parameters in binary
+	TVMByteArray mod_params;
+	std::ifstream params_in(params_file_name, std::ios::binary);
+	if(params_in.fail()) {
+		throw std::runtime_error("could not open params file");
+	}
+	std::string mod_params_data((std::istreambuf_iterator<char>(params_in)), std::istreambuf_iterator<char>());
+	params_in.close();
+	mod_params.data = mod_params_data.c_str();
+	mod_params.size = mod_params_data.length();
+
+	// create the graph executor module
+	tvm::runtime::Module gmod = (* tvm::runtime::Registry::Get("tvm.graph_runtime.create"))
+	        (mod_json, mod_so, (int)dev.device_type, dev.device_id); // dev.device_type must be casted to int !!!
+
+	// // load patameters
+	tvm::runtime::PackedFunc load_params = gmod.GetFunction("load_params");
+	load_params(mod_params);
+
+	engine = new RuntimeEngine();
+
+	if (engine) {
+		engine->use_gpu = use_gpu;
+		engine->set_input = gmod.GetFunction("set_input");
+		engine->get_output = gmod.GetFunction("get_output");
+		engine->run = gmod.GetFunction("run");
+	}
+
+	return engine;
+}
 
 TENSOR *tensor_rpc(int socket, TENSOR * input, int reqcode)
 {
@@ -60,50 +122,102 @@ TENSOR *tensor_rpc(int socket, TENSOR * input, int reqcode)
 	return output;
 }
 
-int server(char *endpoint, int use_gpu)
+TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 {
-	std::vector < int64_t > input_shape;
-	std::vector < int64_t > output_shape;
+	int n;
+	int dtype_code = kDLFloat;
+	int dtype_bits = 32;
+	int dtype_lanes = 1;
+	DLTensor *x, *y;
+	int64_t input_dims[4], output_dims[4];
+	float *p;
+	DLDevice dev {kDLCPU, 0};
+	TENSOR *output;
 
-	// load in the library
-	DLDevice dev {
-	kDLCPU, 0};
-	TVM_Module mod_factory = TVM_Module::LoadFromFile("lib/test_relay_add.so");
+	CHECK_TENSOR(input);
 
-	// create the graph executor module
-	TVM_Module gmod = mod_factory.GetFunction("default") (dev);
-	tvm::runtime::PackedFunc set_input = gmod.GetFunction("set_input");
-	tvm::runtime::PackedFunc get_output = gmod.GetFunction("get_output");
-	tvm::runtime::PackedFunc run = gmod.GetFunction("run");
+	// set input data
+	input_dims[0] = input->batch;
+	input_dims[1] = input->chan;
+	input_dims[2] = input->height;
+	input_dims[3] = input->width;
+	n = input->batch * input->chan * input->height * input->width;
+	TVMArrayAlloc(input_dims, 4, dtype_code, dtype_bits, dtype_lanes, dev.device_type, dev.device_id, &x);
+	p = static_cast<float*>(x->data);
+	memcpy(p, input->data, n * sizeof(float));
 
+	// allocate output space ... ?
+	output_dims[0] = input->batch;
+	output_dims[1] = input->chan;
+	output_dims[2] = input->height;
+	output_dims[3] = input->width;
+	n = input->batch * input->chan * input->height * input->width;
+	TVMArrayAlloc(output_dims, 4, dtype_code, dtype_bits, dtype_lanes, dev.device_type, dev.device_id, &y);
 
-	// Use the C++ API
-	input_shape.clear();
-	output_shape.clear();
+	engine->set_input("x", x);
+	engine->run();
+	engine->get_output(0, y);
 
+	p = static_cast<float*>(y->data);
+	output = tensor_create(output_dims[0], output_dims[1], output_dims[2], output_dims[3]);
+	CHECK_TENSOR(output);
+	memcpy(output->data, p, n * sizeof(float));
 
-	TVM_Tensor x = TVM_Tensor::Empty({ 2, 2 }, DLDataType { kDLFloat, 32, 1 }, dev);
-	TVM_Tensor y = TVM_Tensor::Empty({ 2, 2 }, DLDataType { kDLFloat, 32, 1 }, dev);
+	TVMArrayFree(x);
+	TVMArrayFree(y);
 
-	for (int i = 0; i < 2; ++i) {
-		for (int j = 0; j < 2; ++j) {
-			static_cast < float *>(x->data)[i * 2 + j] = i * 2 + j;
-		}
+	return output;
+}
+
+int server(char *endpoint, char *model_name, int use_gpu)
+{
+	int socket, count, msgcode;
+	TENSOR *input_tensor, *output_tensor;
+	char so_file_name[256], json_file_name[256], params_file_name[256];
+	RuntimeEngine *engine = NULL;
+
+	if ((socket = server_open(endpoint)) < 0)
+		return RET_ERROR;
+
+	snprintf(so_file_name, sizeof(so_file_name) - 1, "%s.so", model_name);
+	snprintf(json_file_name, sizeof(json_file_name) - 1, "%s.json", model_name);
+	snprintf(params_file_name, sizeof(params_file_name) - 1, "%s.params", model_name);
+
+	engine = create_engine(so_file_name, json_file_name, params_file_name, use_gpu);
+	if (engine == NULL) {
+		syslog_error("Create Engine.");
+		server_close(socket);
+		return RET_ERROR;
 	}
-	// set the right input
-	set_input("x", x);
-	// run the code
-	run();
-	// get the output
-	get_output(0, y);
 
-	for (int i = 0; i < 2; ++i) {
-		for (int j = 0; j < 2; ++j) {
-			ICHECK_EQ(static_cast < float *>(y->data)[i * 2 + j], i * 2 + j + 1);
-		}
+	count = 0;
+	for (;;) {
+		if (!socket_readable(socket, 1000))	// timeout 1 s
+			continue;
+
+		input_tensor = service_request(socket, &msgcode);
+		if (!tensor_valid(input_tensor))
+			continue;
+
+		syslog_info("Service %d times", count);
+
+		// Real service ...
+		time_reset();
+		output_tensor = do_service(engine, msgcode, input_tensor);
+		time_spend((char *) "Service");
+
+		service_response(socket, msgcode, output_tensor);
+		tensor_destroy(output_tensor);
+		tensor_destroy(input_tensor);
+
+		count++;
 	}
+	destroy_engine(engine);
 
-  return RET_OK;
+	syslog(LOG_INFO, "Service shutdown.\n");
+	server_close(socket);
+
+	return RET_OK;
 }
 
 int image_post(int socket, char *input_file)
@@ -179,11 +293,10 @@ int main(int argc, char **argv)
 		}
 	}
 
-
 	if (running_server) {
 		// if (IsRunning(endpoint))
 		// 	exit(-1);
-		return server(endpoint, use_gpu);
+		return server(endpoint, "our_model", use_gpu);
 	} else if (argc > 1) {
 		if ((socket = client_open(endpoint)) < 0)
 			return RET_ERROR;
