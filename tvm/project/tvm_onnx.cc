@@ -43,6 +43,9 @@
 typedef int (*CustomSevice)(int, int, TENSOR *);
 
 // Simple RuntimeEngine for prediction
+
+// xxxx8888 GraphExecutor
+
 struct RuntimeEngine {
 	int use_gpu;
 	tvm::runtime::PackedFunc set_input;
@@ -142,9 +145,12 @@ TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 	input_dims[2] = input->height;
 	input_dims[3] = input->width;
 	n = input->batch * input->chan * input->height * input->width;
+	// x = engine->get_input(0); ?
 	TVMArrayAlloc(input_dims, 4, dtype_code, dtype_bits, dtype_lanes, dev.device_type, dev.device_id, &x);
-	p = static_cast<float*>(x->data);
-	memcpy(p, input->data, n * sizeof(float));
+	// p = static_cast<float*>(x->data);
+	// memcpy(p, input->data, n * sizeof(float));
+	x->CopyFromBytes(input->data, n * sizeof(float))
+
 
 	// allocate output space ... ?
 	output_dims[0] = input->batch;
@@ -158,10 +164,12 @@ TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 	engine->run();
 	engine->get_output(0, y);
 
-	p = static_cast<float*>(y->data);
+	// p = static_cast<float*>(y->data);
 	output = tensor_create(output_dims[0], output_dims[1], output_dims[2], output_dims[3]);
 	CHECK_TENSOR(output);
-	memcpy(output->data, p, n * sizeof(float));
+	y->CopyToBytes(output->data, n * sizeof(float));
+
+	// memcpy(output->data, p, n * sizeof(float));
 
 	TVMArrayFree(x);
 	TVMArrayFree(y);
