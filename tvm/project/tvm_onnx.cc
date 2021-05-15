@@ -44,12 +44,15 @@ typedef int (*CustomSevice)(int, int, TENSOR *);
 
 // Simple RuntimeEngine for prediction
 
-// xxxx8888 GraphExecutor
+// xxxx8888 RuntimeEngine
 
 struct RuntimeEngine {
 	int use_gpu;
+	tvm::runtime::PackedFunc get_input;
 	tvm::runtime::PackedFunc set_input;
+
 	tvm::runtime::PackedFunc run;
+	
 	tvm::runtime::PackedFunc get_output;
 };
 
@@ -64,9 +67,15 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 {
 	RuntimeEngine *engine = NULL;
 
+	CheckPoint("so_file_name = %s", so_file_name);
+	CheckPoint("json_file_name = %s", json_file_name);
+	CheckPoint("params_file_name = %s", params_file_name);
+
+
 	// load in the library
 	DLDevice dev {kDLCPU, 0};
 	tvm::runtime::Module mod_so = tvm::runtime::Module::LoadFromFile(so_file_name);
+
 
 	std::ifstream json_in(json_file_name, std::ios::in);
 	if(json_in.fail()) {
@@ -74,6 +83,8 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 	}
 	std::string mod_json((std::istreambuf_iterator<char>(json_in)), std::istreambuf_iterator<char>());
 	json_in.close();
+
+	CheckPoint();
 
 	// parameters in binary
 	TVMByteArray mod_params;
@@ -86,22 +97,48 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 	mod_params.data = mod_params_data.c_str();
 	mod_params.size = mod_params_data.length();
 
-	// create the graph executor module
-	tvm::runtime::Module gmod = (* tvm::runtime::Registry::Get("tvm.graph_runtime.create"))
+	CheckPoint();
+
+	// create the graph executor module, tvm.graph_executor.create, tvm.graph_runtime.create
+	tvm::runtime::Module gmod = (* tvm::runtime::Registry::Get("tvm.graph_executor.create"))
 	        (mod_json, mod_so, (int)dev.device_type, dev.device_id); // dev.device_type must be casted to int !!!
+
+	CheckPoint();
 
 	// // load patameters
 	tvm::runtime::PackedFunc load_params = gmod.GetFunction("load_params");
 	load_params(mod_params);
 
+	CheckPoint();
+
 	engine = new RuntimeEngine();
 
 	if (engine) {
 		engine->use_gpu = use_gpu;
+		engine->get_input = gmod.GetFunction("get_input");
 		engine->set_input = gmod.GetFunction("set_input");
 		engine->get_output = gmod.GetFunction("get_output");
 		engine->run = gmod.GetFunction("run");
 	}
+
+	CheckPoint();
+
+	DLTensor *x, *y;
+	x = engine->get_input(0);
+	if (x != NULL) {
+		CheckPoint("x->ndim = %d", x->ndim);
+		CheckPoint("x->shape = %d x %d x %d x %d", x->shape[0], x->shape[1], x->shape[2], x->shape[3]);
+	} else {
+		CheckPoint(" x == NULL");
+	}
+	y = engine->get_output(0);
+	if (y != NULL) {
+		CheckPoint("y->ndim = %d", y->ndim);
+		CheckPoint("y->shape = %d x %d x %d x %d", y->shape[0], y->shape[1], y->shape[2], y->shape[3]);
+	} else {
+		CheckPoint(" y == NULL");
+	}
+
 
 	return engine;
 }
@@ -145,11 +182,16 @@ TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 	input_dims[2] = input->height;
 	input_dims[3] = input->width;
 	n = input->batch * input->chan * input->height * input->width;
-	// x = engine->get_input(0); ?
+	x = engine->get_input(0);
+	if (x != NULL) {
+		CheckPoint("x->shape = %d x %d x %d x %d", x->shape[0], x->shape[1], x->shape[2], x->shape[3]);
+	}
+
+	 // ?
 	TVMArrayAlloc(input_dims, 4, dtype_code, dtype_bits, dtype_lanes, dev.device_type, dev.device_id, &x);
 	// p = static_cast<float*>(x->data);
 	// memcpy(p, input->data, n * sizeof(float));
-	x->CopyFromBytes(input->data, n * sizeof(float))
+	// x->CopyFromBytes(input->data, n * sizeof(float))
 
 
 	// allocate output space ... ?
@@ -167,7 +209,7 @@ TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 	// p = static_cast<float*>(y->data);
 	output = tensor_create(output_dims[0], output_dims[1], output_dims[2], output_dims[3]);
 	CHECK_TENSOR(output);
-	y->CopyToBytes(output->data, n * sizeof(float));
+	// y->CopyToBytes(output->data, n * sizeof(float));
 
 	// memcpy(output->data, p, n * sizeof(float));
 
@@ -187,11 +229,15 @@ int server(char *endpoint, char *model_name, int use_gpu)
 	if ((socket = server_open(endpoint)) < 0)
 		return RET_ERROR;
 
+	CheckPoint();
+
 	snprintf(so_file_name, sizeof(so_file_name) - 1, "%s.so", model_name);
 	snprintf(json_file_name, sizeof(json_file_name) - 1, "%s.json", model_name);
 	snprintf(params_file_name, sizeof(params_file_name) - 1, "%s.params", model_name);
 
 	engine = create_engine(so_file_name, json_file_name, params_file_name, use_gpu);
+	CheckPoint();
+
 	if (engine == NULL) {
 		syslog_error("Create Engine.");
 		server_close(socket);
@@ -304,7 +350,7 @@ int main(int argc, char **argv)
 	if (running_server) {
 		// if (IsRunning(endpoint))
 		// 	exit(-1);
-		return server(endpoint, "our_model", use_gpu);
+		return server(endpoint, "output/image_zooms.onnx", use_gpu);
 	} else if (argc > 1) {
 		if ((socket = client_open(endpoint)) < 0)
 			return RET_ERROR;

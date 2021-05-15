@@ -45,10 +45,9 @@ if __name__ == '__main__':
     # ************************************************************************************/
     if args.gpu:
         target = tvm.target.Target("cuda", host='llvm')
-        device = tvm.gpu(0)
     else:
         target = tvm.target.Target("llvm", host='llvm')
-        device = tvm.cpu(0)
+    device = tvm.device(str(target), 0)        
     input_shape = (1, 3, 1024, 1024)
 
 
