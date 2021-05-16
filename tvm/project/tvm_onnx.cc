@@ -212,6 +212,7 @@ TENSOR *tensor_rpc(int socket, TENSOR * input, int reqcode)
 	return output;
 }
 
+// zoom 4x
 TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 {
 	TENSOR *output;
@@ -224,10 +225,24 @@ TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 		return output;
 	}
 
-	TENSOR *zoom = tensor_zoom(input, engine->x_dims[2], engine->x_dims[3]);
-	CHECK_TENSOR(zoom);
-	output = engine_forward(engine, zoom);
-	tensor_destroy(zoom);
+	CheckPoint();
+	TENSOR *forward_input = tensor_zoom(input, engine->x_dims[2], engine->x_dims[3]);
+	CHECK_TENSOR(forward_input);
+	CheckPoint("-----------------------");
+	tensor_show(forward_input);
+	TENSOR *forward_output = engine_forward(engine, forward_input);
+	CHECK_TENSOR(forward_output);
+
+	CheckPoint();
+	output = tensor_zoom(forward_output, 4 * input->height, 4 * input->width);
+	CheckPoint();
+
+	tensor_destroy(forward_output);
+	CheckPoint();
+
+	tensor_destroy(forward_input);
+
+	CheckPoint();
 
 	return output;
 }
