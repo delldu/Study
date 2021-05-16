@@ -48,7 +48,8 @@ if __name__ == '__main__':
     else:
         target = tvm.target.Target("llvm", host='llvm')
     device = tvm.device(str(target), 0)        
-    input_shape = (1, 3, 1024, 1024)
+    input_shape = (1, 3, 512, 512)
+    # input_shape = (1, 3, tvm.relay.Any(), tvm.relay.Any())
 
 
     def tvm_export():

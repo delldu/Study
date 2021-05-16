@@ -36,6 +36,10 @@
 #include <nimage/image.h>
 #include <nimage/nnmsg.h>
 
+// For mkdir
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #define IMAGE_SERVICE_URL "tcp://127.0.0.1:9001"
 #define IMAGE_SERVICE_CODE 0x90010000 
 
@@ -48,34 +52,24 @@ typedef int (*CustomSevice)(int, int, TENSOR *);
 
 struct RuntimeEngine {
 	int use_gpu;
+
+	int x_n, x_dims[4];
+	int y_n, y_dims[4];
+	DLTensor *x, *y;
+
 	tvm::runtime::PackedFunc get_input;
 	tvm::runtime::PackedFunc set_input;
-
 	tvm::runtime::PackedFunc run;
-	
 	tvm::runtime::PackedFunc get_output;
 };
-
-void destroy_engine(RuntimeEngine *engine)
-{
-	if (engine)
-		delete engine;
-	engine = NULL;
-}
 
 RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *params_file_name, int use_gpu)
 {
 	RuntimeEngine *engine = NULL;
 
-	CheckPoint("so_file_name = %s", so_file_name);
-	CheckPoint("json_file_name = %s", json_file_name);
-	CheckPoint("params_file_name = %s", params_file_name);
-
-
 	// load in the library
 	DLDevice dev {kDLCPU, 0};
 	tvm::runtime::Module mod_so = tvm::runtime::Module::LoadFromFile(so_file_name);
-
 
 	std::ifstream json_in(json_file_name, std::ios::in);
 	if(json_in.fail()) {
@@ -83,8 +77,6 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 	}
 	std::string mod_json((std::istreambuf_iterator<char>(json_in)), std::istreambuf_iterator<char>());
 	json_in.close();
-
-	CheckPoint();
 
 	// parameters in binary
 	TVMByteArray mod_params;
@@ -97,19 +89,13 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 	mod_params.data = mod_params_data.c_str();
 	mod_params.size = mod_params_data.length();
 
-	CheckPoint();
-
 	// create the graph executor module, tvm.graph_executor.create, tvm.graph_runtime.create
 	tvm::runtime::Module gmod = (* tvm::runtime::Registry::Get("tvm.graph_executor.create"))
 	        (mod_json, mod_so, (int)dev.device_type, dev.device_id); // dev.device_type must be casted to int !!!
 
-	CheckPoint();
-
 	// // load patameters
 	tvm::runtime::PackedFunc load_params = gmod.GetFunction("load_params");
 	load_params(mod_params);
-
-	CheckPoint();
 
 	engine = new RuntimeEngine();
 
@@ -119,28 +105,92 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 		engine->set_input = gmod.GetFunction("set_input");
 		engine->get_output = gmod.GetFunction("get_output");
 		engine->run = gmod.GetFunction("run");
-	}
-
-	CheckPoint();
-
-	DLTensor *x, *y;
-	x = engine->get_input(0);
-	if (x != NULL) {
-		CheckPoint("x->ndim = %d", x->ndim);
-		CheckPoint("x->shape = %d x %d x %d x %d", x->shape[0], x->shape[1], x->shape[2], x->shape[3]);
 	} else {
-		CheckPoint(" x == NULL");
-	}
-	y = engine->get_output(0);
-	if (y != NULL) {
-		CheckPoint("y->ndim = %d", y->ndim);
-		CheckPoint("y->shape = %d x %d x %d x %d", y->shape[0], y->shape[1], y->shape[2], y->shape[3]);
-	} else {
-		CheckPoint(" y == NULL");
+		throw std::runtime_error("create engine");
 	}
 
+	int i, ndim, len;
+	char buf[256];
+	engine->x = engine->get_input(0);
+	engine->y = engine->get_output(0);
+	engine->x_n = 1;
+
+	ndim = ARRAY_SIZE(engine->x_dims);
+	for (len = 0, i = 0; i < engine->x->ndim; i++) {
+		// save input shapes to x_dims[0, 4)
+		engine->x_n *= engine->x->shape[i];
+		if (i < ndim)
+			engine->x_dims[i] = (int)engine->x->shape[i];
+		else {
+			engine->x_dims[ndim - 1] *= (int)engine->x->shape[i];
+		}
+
+		// format output
+		len += snprintf(buf + len, sizeof(buf) - 1 - len, "%d", (int)engine->x->shape[i]);
+		if (i < engine->x->ndim - 1)
+			len += snprintf(buf + len, sizeof(buf) - 1 - len, "x");
+	}
+	// Fill x_dims with 1 for others ...
+	for (; i < 4; i++)
+		engine->x_dims[i] = 1;
+	syslog_info("Model input: %s", buf);
+
+	engine->y_n = 1;
+	ndim = ARRAY_SIZE(engine->y_dims);
+	for (len = 0, i = 0; i < engine->y->ndim; i++) {
+		// save input shapes to y_dims[0, 4)
+		engine->y_n *= engine->y->shape[i];
+		if (i < ndim) {
+			engine->y_dims[i] = (int)engine->y->shape[i];
+		}
+		else {
+			engine->y_dims[ndim - 1] *= (int)engine->y->shape[i];
+		}
+		// format output
+		len += snprintf(buf + len, sizeof(buf) - 1 - len, "%d", (int)engine->y->shape[i]);
+		if (i < engine->y->ndim - 1)
+			len += snprintf(buf + len, sizeof(buf) - 1 - len, "x");
+	}
+	// Fill y_dims with 1 for others ...
+	for (; i < 4; i++)
+		engine->y_dims[i] = 1;
+
+	syslog_info("Model output: %s", buf);
 
 	return engine;
+}
+
+TENSOR *engine_forward(RuntimeEngine *engine, TENSOR *input)
+{
+	int n;
+	float *p;
+	TENSOR *output;
+
+	CHECK_TENSOR(input);
+	n = input->batch * input->chan * input->height * input->width;
+	if (n != engine->x_n) {
+		syslog_error("Input tensor size %d does not match engine input size %d", n, engine->x_n);
+		return NULL;
+	}
+	output = tensor_create(engine->y_dims[0], engine->y_dims[1], engine->y_dims[2], engine->y_dims[3]);
+	CHECK_TENSOR(output);
+
+	p = static_cast<float*>(engine->x->data);
+	memcpy(p, input->data, engine->x_n * sizeof(float));
+
+	engine->run();
+
+	p = static_cast<float*>(engine->y->data);
+	memcpy(output->data, p, engine->y_n * sizeof(float));
+
+	return output;
+}
+
+void destroy_engine(RuntimeEngine *engine)
+{
+	if (engine)
+		delete engine;
+	engine = NULL;
 }
 
 TENSOR *tensor_rpc(int socket, TENSOR * input, int reqcode)
@@ -164,57 +214,20 @@ TENSOR *tensor_rpc(int socket, TENSOR * input, int reqcode)
 
 TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 {
-	int n;
-	int dtype_code = kDLFloat;
-	int dtype_bits = 32;
-	int dtype_lanes = 1;
-	DLTensor *x, *y;
-	int64_t input_dims[4], output_dims[4];
-	float *p;
-	DLDevice dev {kDLCPU, 0};
 	TENSOR *output;
 
+	(void) msgcode;	// avoid compiler complaint
 	CHECK_TENSOR(input);
 
-	// set input data
-	input_dims[0] = input->batch;
-	input_dims[1] = input->chan;
-	input_dims[2] = input->height;
-	input_dims[3] = input->width;
-	n = input->batch * input->chan * input->height * input->width;
-	x = engine->get_input(0);
-	if (x != NULL) {
-		CheckPoint("x->shape = %d x %d x %d x %d", x->shape[0], x->shape[1], x->shape[2], x->shape[3]);
+	if (input->height == engine->x_dims[2] && input->width == engine->x_dims[3]) {
+		output = engine_forward(engine, input);
+		return output;
 	}
 
-	 // ?
-	TVMArrayAlloc(input_dims, 4, dtype_code, dtype_bits, dtype_lanes, dev.device_type, dev.device_id, &x);
-	// p = static_cast<float*>(x->data);
-	// memcpy(p, input->data, n * sizeof(float));
-	// x->CopyFromBytes(input->data, n * sizeof(float))
-
-
-	// allocate output space ... ?
-	output_dims[0] = input->batch;
-	output_dims[1] = input->chan;
-	output_dims[2] = input->height;
-	output_dims[3] = input->width;
-	n = input->batch * input->chan * input->height * input->width;
-	TVMArrayAlloc(output_dims, 4, dtype_code, dtype_bits, dtype_lanes, dev.device_type, dev.device_id, &y);
-
-	engine->set_input("x", x);
-	engine->run();
-	engine->get_output(0, y);
-
-	// p = static_cast<float*>(y->data);
-	output = tensor_create(output_dims[0], output_dims[1], output_dims[2], output_dims[3]);
-	CHECK_TENSOR(output);
-	// y->CopyToBytes(output->data, n * sizeof(float));
-
-	// memcpy(output->data, p, n * sizeof(float));
-
-	TVMArrayFree(x);
-	TVMArrayFree(y);
+	TENSOR *zoom = tensor_zoom(input, engine->x_dims[2], engine->x_dims[3]);
+	CHECK_TENSOR(zoom);
+	output = engine_forward(engine, zoom);
+	tensor_destroy(zoom);
 
 	return output;
 }
@@ -229,14 +242,11 @@ int server(char *endpoint, char *model_name, int use_gpu)
 	if ((socket = server_open(endpoint)) < 0)
 		return RET_ERROR;
 
-	CheckPoint();
-
 	snprintf(so_file_name, sizeof(so_file_name) - 1, "%s.so", model_name);
 	snprintf(json_file_name, sizeof(json_file_name) - 1, "%s.json", model_name);
 	snprintf(params_file_name, sizeof(params_file_name) - 1, "%s.params", model_name);
 
 	engine = create_engine(so_file_name, json_file_name, params_file_name, use_gpu);
-	CheckPoint();
 
 	if (engine == NULL) {
 		syslog_error("Create Engine.");
@@ -274,6 +284,24 @@ int server(char *endpoint, char *model_name, int use_gpu)
 	return RET_OK;
 }
 
+void save_tensor_as_image(TENSOR * tensor, char *filename)
+{
+	char output_filename[256], *p;
+	IMAGE *image = image_from_tensor(tensor, 0);
+
+	if (image_valid(image)) {
+		mkdir("output", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+		p = strrchr(filename, '/');
+		p = (!p) ? filename : p + 1;
+		snprintf(output_filename, sizeof(output_filename) - 1, "output/%s", p);
+		image_save(image, output_filename);
+
+		image_save(image, filename);
+		image_destroy(image);
+	}
+}
+
 int image_post(int socket, char *input_file)
 {
   IMAGE *send_image;
@@ -289,7 +317,7 @@ int image_post(int socket, char *input_file)
 
     recv_tensor = tensor_rpc(socket, send_tensor, IMAGE_SERVICE_CODE);
     if (tensor_valid(recv_tensor)) {
-      // SaveTensorAsImage(recv_tensor, input_file);
+      save_tensor_as_image(recv_tensor, input_file);
       tensor_destroy(recv_tensor);
     }
 
