@@ -225,24 +225,15 @@ TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 		return output;
 	}
 
-	CheckPoint();
 	TENSOR *forward_input = tensor_zoom(input, engine->x_dims[2], engine->x_dims[3]);
 	CHECK_TENSOR(forward_input);
-	CheckPoint("-----------------------");
-	tensor_show(forward_input);
 	TENSOR *forward_output = engine_forward(engine, forward_input);
 	CHECK_TENSOR(forward_output);
 
-	CheckPoint();
 	output = tensor_zoom(forward_output, 4 * input->height, 4 * input->width);
-	CheckPoint();
 
 	tensor_destroy(forward_output);
-	CheckPoint();
-
 	tensor_destroy(forward_input);
-
-	CheckPoint();
 
 	return output;
 }
@@ -286,6 +277,7 @@ int server(char *endpoint, char *model_name, int use_gpu)
 		time_spend((char *) "Service");
 
 		service_response(socket, msgcode, output_tensor);
+
 		tensor_destroy(output_tensor);
 		tensor_destroy(input_tensor);
 
@@ -311,8 +303,6 @@ void save_tensor_as_image(TENSOR * tensor, char *filename)
 		p = (!p) ? filename : p + 1;
 		snprintf(output_filename, sizeof(output_filename) - 1, "output/%s", p);
 		image_save(image, output_filename);
-
-		image_save(image, filename);
 		image_destroy(image);
 	}
 }
