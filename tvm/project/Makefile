@@ -7,8 +7,6 @@
 #************************************************************************************/
 #
 INSTALL_DIR := /usr/local/
-TVM_ROOT := $(shell cd ../..; pwd)
-DMLC_CORE := ${TVM_ROOT}/3rdparty/dmlc-core
 
 TARGET := tvm_onnx
 
@@ -20,12 +18,12 @@ INCS	:= $(shell ./tvmtool --cflags) \
 
 LIBS	:= \
 		$(shell ./tvmtool --libs) \
-		-L/usr/local/cuda-10.2/lib64 -lcudart_static -lcuda -lrt
+		-L/usr/local/cuda-10.2/lib64 -lcudart -lcuda -lrt
 
 DEFINES := -std=c++14 -O2 -fPIC -DDMLC_USE_LOGGING_LIBRARY=\<tvm/runtime/logging.h\> -DCONFIG_CUDA
 
 
-CXXFLAGS := -O2 -fPIC -Wall -Wextra
+CXXFLAGS := -O2 -fPIC -Wall -Wextra -Wno-unused-parameter
 
 LDFLAGS := -fPIC
 

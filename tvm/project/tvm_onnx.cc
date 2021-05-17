@@ -76,11 +76,7 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 	if (use_gpu)
 		device.device_type = kDLGPU;
 
-	CheckPoint();
-
 	tvm::runtime::Module mod_so = tvm::runtime::Module::LoadFromFile(so_file_name);
-
-	CheckPoint();
 
 	std::ifstream json_in(json_file_name, std::ios::in);
 	if(json_in.fail()) {
@@ -104,7 +100,7 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 	tvm::runtime::Module gmod = (* tvm::runtime::Registry::Get("tvm.graph_executor.create"))
 	        (mod_json, mod_so, (int)device.device_type, device.device_id); // device.device_type must be casted to int !!!
 
-	// // load patameters
+	// load patameters
 	tvm::runtime::PackedFunc load_params = gmod.GetFunction("load_params");
 	load_params(mod_params);
 
@@ -231,31 +227,64 @@ TENSOR *tensor_rpc(int socket, TENSOR * input, int reqcode)
 	return output;
 }
 
-// zoom 4x
+
 TENSOR *do_service(RuntimeEngine *engine, int msgcode, TENSOR *input)
 {
+	int nh, nw;
+	float scale;
+
 	TENSOR *output;
+	TENSOR *forward_input, *forward_output;
+	TENSOR *zoom_input, *zoom_output;
 
 	(void) msgcode;	// avoid compiler complaint
 	CHECK_TENSOR(input);
+
+	if (input->batch != engine->x_dims[0] || input->chan != engine->x_dims[1]) {
+		syslog_error("Input tensor batch %d and channel %d does not match engine input size %d, %d", 
+			input->batch, input->chan, engine->x_dims[0], engine->x_dims[1]);
+		return NULL;
+	}
 
 	if (input->height == engine->x_dims[2] && input->width == engine->x_dims[3]) {
 		output = engine_forward(engine, input);
 		return output;
 	}
 
-	TENSOR *forward_input = tensor_zoom(input, engine->x_dims[2], engine->x_dims[3]);
+	// input is small, could be put inside in model input ...
+	if (input->height <= engine->x_dims[2] && input->width <= engine->x_dims[3]) {
+		forward_input = tensor_zeropad(input, engine->x_dims[2], engine->x_dims[3]);
+		CHECK_TENSOR(forward_input);
+
+		forward_output = engine_forward(engine, forward_input);
+
+		output = tensor_zeropad(forward_output, 4 * input->height, 4 * input->width);
+		tensor_destroy(forward_output);
+		tensor_destroy(forward_input);
+
+		return output;
+	}
+
+	// Now we need zoom input ...
+	// scale * input->height <= x_dims[2]
+	// scale * input->width <= x_dims[3]
+	scale = MIN((float)engine->x_dims[2]/input->height, (float)engine->x_dims[3]/input->width);
+	nh = scale * input->height;
+	nw = scale * input->width;
+	zoom_input = tensor_zoom(input, nh, nw); CHECK_TENSOR(zoom_input);
+	forward_input = tensor_zeropad(zoom_input, engine->x_dims[2], engine->x_dims[3]);
 	CHECK_TENSOR(forward_input);
-	TENSOR *forward_output = engine_forward(engine, forward_input);
-	CHECK_TENSOR(forward_output);
-
-	output = tensor_zoom(forward_output, 4 * input->height, 4 * input->width);
-
+	forward_output = engine_forward(engine, forward_input);
+	zoom_output = tensor_zeropad(forward_output, 4 * nh, 4 * nw);
+	output = tensor_zoom(zoom_output, 4 * input->height, 4 * input->width);
+	tensor_destroy(zoom_output);
 	tensor_destroy(forward_output);
 	tensor_destroy(forward_input);
+	tensor_destroy(zoom_input);
 
 	return output;
 }
+
 
 int server(char *endpoint, char *model_name, int use_gpu)
 {

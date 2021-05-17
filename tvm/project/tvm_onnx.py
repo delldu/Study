@@ -51,7 +51,6 @@ if __name__ == '__main__':
     input_shape = (1, 3, 512, 512)
     # input_shape = (1, 3, tvm.relay.Any(), tvm.relay.Any())
 
-
     def tvm_export():
         """Export onnx model."""
 
