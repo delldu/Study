@@ -15,12 +15,14 @@ TARGET := tvm_onnx
 SOURCE :=  \
 	tvm_onnx.cc tvm_runtime.cc
 
-INCS	:= $(shell ./tvmtool --cflags)
+INCS	:= $(shell ./tvmtool --cflags) \
+	-I/usr/local/cuda-10.2/include
 
 LIBS	:= \
 		$(shell ./tvmtool --libs) \
+		-L/usr/local/cuda-10.2/lib64 -lcudart_static -lcuda -lrt
 
-DEFINES := -std=c++14 -O2 -fPIC -DDMLC_USE_LOGGING_LIBRARY=\<tvm/runtime/logging.h\>
+DEFINES := -std=c++14 -O2 -fPIC -DDMLC_USE_LOGGING_LIBRARY=\<tvm/runtime/logging.h\> -DCONFIG_CUDA
 
 
 CXXFLAGS := -O2 -fPIC -Wall -Wextra

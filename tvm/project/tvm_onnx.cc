@@ -40,6 +40,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+
 #define IMAGE_SERVICE_URL "tcp://127.0.0.1:9001"
 #define IMAGE_SERVICE_CODE 0x90010000 
 
@@ -68,8 +72,15 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 	RuntimeEngine *engine = NULL;
 
 	// load in the library
-	DLDevice dev {kDLCPU, 0};
+	DLDevice device {kDLCPU, 0};
+	if (use_gpu)
+		device.device_type = kDLGPU;
+
+	CheckPoint();
+
 	tvm::runtime::Module mod_so = tvm::runtime::Module::LoadFromFile(so_file_name);
+
+	CheckPoint();
 
 	std::ifstream json_in(json_file_name, std::ios::in);
 	if(json_in.fail()) {
@@ -91,7 +102,7 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 
 	// create the graph executor module, tvm.graph_executor.create, tvm.graph_runtime.create
 	tvm::runtime::Module gmod = (* tvm::runtime::Registry::Get("tvm.graph_executor.create"))
-	        (mod_json, mod_so, (int)dev.device_type, dev.device_id); // dev.device_type must be casted to int !!!
+	        (mod_json, mod_so, (int)device.device_type, device.device_id); // device.device_type must be casted to int !!!
 
 	// // load patameters
 	tvm::runtime::PackedFunc load_params = gmod.GetFunction("load_params");
@@ -176,12 +187,20 @@ TENSOR *engine_forward(RuntimeEngine *engine, TENSOR *input)
 	CHECK_TENSOR(output);
 
 	p = static_cast<float*>(engine->x->data);
-	memcpy(p, input->data, engine->x_n * sizeof(float));
+	if (engine->use_gpu) {
+		cudaMemcpy(p, input->data, engine->x_n * sizeof(float), cudaMemcpyHostToDevice);
+	} else {
+		memcpy(p, input->data, engine->x_n * sizeof(float));
+	}
 
 	engine->run();
 
 	p = static_cast<float*>(engine->y->data);
-	memcpy(output->data, p, engine->y_n * sizeof(float));
+	if (engine->use_gpu) {
+		cudaMemcpy(output->data, p, engine->y_n * sizeof(float), cudaMemcpyDeviceToHost);
+	} else {
+		memcpy(output->data, p, engine->y_n * sizeof(float));
+	}
 
 	return output;
 }
