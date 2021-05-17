@@ -51,9 +51,6 @@
 typedef int (*CustomSevice)(int, int, TENSOR *);
 
 // Simple RuntimeEngine for prediction
-
-// xxxx8888 RuntimeEngine
-
 struct RuntimeEngine {
 	int use_gpu;
 
@@ -296,9 +293,15 @@ int server(char *endpoint, char *model_name, int use_gpu)
 	if ((socket = server_open(endpoint)) < 0)
 		return RET_ERROR;
 
-	snprintf(so_file_name, sizeof(so_file_name) - 1, "%s.so", model_name);
-	snprintf(json_file_name, sizeof(json_file_name) - 1, "%s.json", model_name);
-	snprintf(params_file_name, sizeof(params_file_name) - 1, "%s.params", model_name);
+	if (use_gpu) {
+		snprintf(so_file_name, sizeof(so_file_name) - 1, "models/cuda_%s.so", model_name);
+		snprintf(json_file_name, sizeof(json_file_name) - 1, "models/cuda_%s.json", model_name);
+		snprintf(params_file_name, sizeof(params_file_name) - 1, "models/cuda_%s.params", model_name);
+	} else {
+		snprintf(so_file_name, sizeof(so_file_name) - 1, "models/cpu_%s.so", model_name);
+		snprintf(json_file_name, sizeof(json_file_name) - 1, "models/cpu_%s.json", model_name);
+		snprintf(params_file_name, sizeof(params_file_name) - 1, "models/cpu_%s.params", model_name);
+	}
 
 	engine = create_engine(so_file_name, json_file_name, params_file_name, use_gpu);
 
@@ -388,6 +391,7 @@ void help(char *cmd)
 	printf("    h, --help                   Display this help.\n");
 	printf("    e, --endpoint               Set endpoint.\n");
 	printf("    s, --server <0 | 1>         Start server (use gpu).\n");
+	printf("    m, --model <file.onnx>      Set model file.\n");
 
 	exit(1);
 }
@@ -401,18 +405,20 @@ int main(int argc, char **argv)
 
 	int option_index = 0;
 	char *endpoint = (char *) IMAGE_SERVICE_URL;
+	char *model = (char *) "image_zooms.onnx";
 
 	struct option long_opts[] = {
 		{"help", 0, 0, 'h'},
 		{"endpoint", 1, 0, 'e'},
 		{"server", 1, 0, 's'},
+		{"model", 1, 0, 'm'},
 		{0, 0, 0, 0}
 	};
 
 	if (argc <= 1)
 		help(argv[0]);
 
-	while ((optc = getopt_long(argc, argv, "h e: s:", long_opts, &option_index)) != EOF) {
+	while ((optc = getopt_long(argc, argv, "h e: s: m:", long_opts, &option_index)) != EOF) {
 		switch (optc) {
 		case 'e':
 			endpoint = optarg;
@@ -420,6 +426,9 @@ int main(int argc, char **argv)
 		case 's':
 			running_server = 1;
 			use_gpu = atoi(optarg);
+			break;
+		case 'm':
+			model = optarg;
 			break;
 		case 'h':				// help
 		default:
@@ -431,7 +440,7 @@ int main(int argc, char **argv)
 	if (running_server) {
 		// if (IsRunning(endpoint))
 		// 	exit(-1);
-		return server(endpoint, (char *)"output/image_zooms.onnx", use_gpu);
+		return server(endpoint, model, use_gpu);
 	} else if (argc > 1) {
 		if ((socket = client_open(endpoint)) < 0)
 			return RET_ERROR;

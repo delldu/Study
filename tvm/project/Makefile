@@ -40,7 +40,7 @@ OBJECT := $(addsuffix .o,$(basename ${SOURCE}))
 all: ${TARGET}
 
 ${TARGET}: ${OBJECT}
-	${CXX} ${LDFLAGS} -o ${TARGET} ${OBJECT}  output/image_zooms.onnx.so ${LIBS}
+	${CXX} ${LDFLAGS} -o ${TARGET} ${OBJECT} ${LIBS}
 
 install:
 	install -m 755 ${TARGET} ${INSTALL_DIR}/bin

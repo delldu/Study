@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--export', help="export tvm model", action='store_true')
     parser.add_argument('-v', '--verify', help="verify tvm model", action='store_true')
     parser.add_argument('-g', '--gpu', help="use gpu", action='store_true')
-    parser.add_argument('-o', '--output', type=str, default="output", help="output folder")
+    parser.add_argument('-o', '--output', type=str, default="models", help="output folder")
 
     args = parser.parse_args()
 
@@ -57,9 +57,14 @@ if __name__ == '__main__':
         print("Building model on {} ...".format(target))
 
         onnx_model = onnx.load(args.input)
-        onnx_json_path = "{}/{}.json".format(args.output, os.path.basename(args.input))
-        onnx_so_path = "{}/{}.so".format(args.output, os.path.basename(args.input))
-        onnx_params_path = "{}/{}.params".format(args.output, os.path.basename(args.input))
+        if (args.gpu):
+            onnx_json_path = "{}/cuda_{}.json".format(args.output, os.path.basename(args.input))
+            onnx_so_path = "{}/cuda_{}.so".format(args.output, os.path.basename(args.input))
+            onnx_params_path = "{}/cuda_{}.params".format(args.output, os.path.basename(args.input))
+        else:
+            onnx_json_path = "{}/cpu_{}.json".format(args.output, os.path.basename(args.input))
+            onnx_so_path = "{}/cpu_{}.so".format(args.output, os.path.basename(args.input))
+            onnx_params_path = "{}/cpu_{}.params".format(args.output, os.path.basename(args.input))
 
         # Parsing onnx model
         sym, params = relay.frontend.from_onnx(onnx_model, {'input': input_shape})
@@ -81,9 +86,14 @@ if __name__ == '__main__':
 
         print("Running model on {} ...".format(device))
 
-        onnx_json_path = "{}/{}.json".format(args.output, os.path.basename(args.input))
-        onnx_so_path = "{}/{}.so".format(args.output, os.path.basename(args.input))
-        onnx_params_path = "{}/{}.params".format(args.output, os.path.basename(args.input))
+        if (args.gpu):
+            onnx_json_path = "{}/cuda_{}.json".format(args.output, os.path.basename(args.input))
+            onnx_so_path = "{}/cuda_{}.so".format(args.output, os.path.basename(args.input))
+            onnx_params_path = "{}/cuda_{}.params".format(args.output, os.path.basename(args.input))
+        else:
+            onnx_json_path = "{}/cpu_{}.json".format(args.output, os.path.basename(args.input))
+            onnx_so_path = "{}/cpu_{}.so".format(args.output, os.path.basename(args.input))
+            onnx_params_path = "{}/cpu_{}.params".format(args.output, os.path.basename(args.input))
 
         # Load module
         loaded_json = open(onnx_json_path).read()
