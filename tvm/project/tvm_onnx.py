@@ -23,7 +23,7 @@ if __name__ == '__main__':
     """TVM Onnx tools ..."""
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-i', '--input', type=str, default="test.onnx", help="input onnx file")
+    parser.add_argument('input', type=str, help="input onnx file (eg: test.onnx)")
     parser.add_argument('-e', '--export', help="export tvm model", action='store_true')
     parser.add_argument('-v', '--verify', help="verify tvm model", action='store_true')
     parser.add_argument('-g', '--gpu', help="use gpu", action='store_true')
