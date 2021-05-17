@@ -74,7 +74,7 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name, char *par
 	// load in the library
 	DLDevice device {kDLCPU, 0};
 	if (use_gpu)
-		device.device_type = kDLGPU;
+		device.device_type = kDLCUDA;
 
 	tvm::runtime::Module mod_so = tvm::runtime::Module::LoadFromFile(so_file_name);
 
@@ -431,7 +431,7 @@ int main(int argc, char **argv)
 	if (running_server) {
 		// if (IsRunning(endpoint))
 		// 	exit(-1);
-		return server(endpoint, "output/image_zooms.onnx", use_gpu);
+		return server(endpoint, (char *)"output/image_zooms.onnx", use_gpu);
 	} else if (argc > 1) {
 		if ((socket = client_open(endpoint)) < 0)
 			return RET_ERROR;

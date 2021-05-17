@@ -8,7 +8,7 @@
 #
 #! /bin/sh
 
-TVM_INSTALL_DIR=/home/dell/ZDisk/Workspace/abc/t/tvm
+TVM_INSTALL_DIR=/home/dell/ZDisk/Workspace/study/tvm
 
 usage()
 {
@@ -23,16 +23,16 @@ show_cflags()
 {
 	# -I${TVM_INSTALL_DIR} is for tvm_runtime.cc !!!
 
-	echo -n "-isystem${TVM_INSTALL_DIR}/include "
-	echo -n "-isystem${TVM_INSTALL_DIR}/3rdparty/dmlc-core/include "
-	echo -n "-isystem${TVM_INSTALL_DIR}/3rdparty/dlpack/include "
-	echo -n "-I${TVM_INSTALL_DIR} "
+	echo "-isystem${TVM_INSTALL_DIR}/include"
+	echo "-isystem${TVM_INSTALL_DIR}/3rdparty/dmlc-core/include"
+	echo "-isystem${TVM_INSTALL_DIR}/3rdparty/dlpack/include"
+	echo "-I${TVM_INSTALL_DIR}"
 	echo "-I/usr/local/include"
 }
 
 show_libs()
 {
- 	echo "-L${TVM_INSTALL_DIR}/build -ltvm_runtime -ldl -pthread "
+ 	echo "-ldl"
  	echo "-Wl,-Bstatic -lnimage -lnanomsg -lanl -lmsgpackc -ljpeg -lpng -lz -Wl,-Bdynamic -lpthread -lm"
 }
 
