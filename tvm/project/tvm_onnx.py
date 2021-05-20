@@ -112,18 +112,19 @@ if __name__ == '__main__':
         input = tvm.nd.array((np.random.uniform(size=input_shape).astype("float32")), device)
 
         module.set_input("input", input)
-
-        start_time = time.time()
-        for i in range(10):
-            print("Running {}/10 ... ".format(i + 1, 10))
-            module.run()
-        end_time = time.time()
-
+        module.run()
         output = module.get_output(0)
-
         print(output)
 
-        print("Prediction spend {:.3f} seconds/10 times .".format(end_time - start_time))
+
+        print("Evaluating ...")
+        ftimer = module.module.time_evaluator("run", device, number=1, repeat=5)
+        prof_res = np.array(ftimer().results) * 1000  # multiply 1000 for converting to millisecond
+        print(
+            "%-20s %-19s (%s)" % (onnx_so_path, "%.2f ms" % np.mean(prof_res), "%.2f ms" % np.std(prof_res))
+        )
+
+
 
     if args.export:
         tvm_export()
