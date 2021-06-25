@@ -10,22 +10,56 @@
 
 usage()
 {
-	echo "Usage: $0 [options] commands"
+	echo "Usage: $0 [options] input output"
 	echo "Options:"
-	echo "  --encode input output    Encode input(like temp/%3d.png) to output(like o.mp4)"
-	echo "  --decode input output    Decode input(like a.mp4) to output(like temp/%3d.png)"
+	echo "    encode <input/%3d.png> <output.mp4>"
+	echo "           Encode input to output"
+	echo "    decode <input.mp4> <output/%3d.png"
+	echo "           Decode input to output"
+	echo "    togray <input.mp4> <output.mp4 | output/%3d.png>"
+	echo "           Convert color video to gray one"
+	echo "    halfsize <input.mp4> <output.mp4 | output/%3d.png>"
+	echo "           Scale video to half size"
+	echo "    keyframe <input.mp4> <output/%3d.png>"
+	echo "           Extract key frames"
+	echo "    cutframe --start <n1> --duration <n1> <input.mp4> <output.mp4 | output/%3d.png>"
+	echo "           Cut video from start time n1 seconds, long n2 seconds"
 
 	exit 1
 }
 
+cutframe()
+{
+	START=0
+	DURATION=1
+
+	i=0
+	while [ $i -lt 2 ] ; 
+	do
+		case $1 in
+		--s*)
+			START=$2
+			shift
+			shift
+			;;
+		--d*)
+			DURATION=$2;
+			shift
+			shift
+			;;
+		esac
+		i=`expr $i + 1`
+	done
+
+	[ "$1" == "" -o "$2" == ""  ] && usage
+	echo ffmpeg -ss "$START" -t "$DURATION" -accurate_seek -i "$1" -codec copy "$2"
+}
+
 encode()
 {
-	[ "$1" = "" ] && usage
-	[ "$2" = "" ] && usage
+	[ "$1" == "" -o "$2" == ""  ] && usage
 
-	# ffmpeg -i '%3d.png' -vcodec avc -c:v h264 -preset slow -crf 10 -vf format=yuv420p small.mp4
 	ffmpeg -i "$1" -vcodec avc -c:v h264 -preset slow -crf 11 -vf format=yuv420p "$2"
-
 	# Test results:
 	# crf == 10: hr PSNR = 43.00, Size = 70M
 	# crf == 11: hr PSNR = 42.75, Size = 58M ----------------------- Best < Size 60M
@@ -36,26 +70,31 @@ encode()
 
 decode()
 {
-	[ "$1" = "" ] && usage
-	[ "$2" = "" ] && usage
-	# ffmpeg -i lr.mp4 -q:v 2 %3d.png
+	[ "$1" == "" -o "$2" == ""  ] && usage
 	ffmpeg -i "$1" -q:v 2 "$2"
 }
 
-[ "$*" = "" ] && usage
+togray()
+{
+	[ "$1" == "" -o "$2" == ""  ] && usage
+	ffmpeg -i "$1" -vf hue=s=0 "$2"
+}
 
-case $1 in
---enc*)
-	encode $2 $3
-	shift
-	shift
-	shift
-	;;
---dec*)
-	decode $2 $3
-	shift
-	shift
-	shift
-	;;
-esac
+halfsize()
+{
+	[ "$1" == "" -o "$2" == ""  ] && usage
+	ffmpeg -i "$1" -vf scale="iw/2:ih/2" "$2"
+}
 
+keyframe()
+{
+	[ "$1" == "" -o "$2" == ""  ] && usage
+	ffmpeg -i "$1" -vf select='eq(pict_type\,I)' -vsync 2 -f image2 "$2"
+}
+
+if [ "$*" == "" ] ;
+then
+	usage
+else
+	eval "$*"
+fi
