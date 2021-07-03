@@ -14,4 +14,5 @@ atexit.register
 export TOPHUB_LOCATION=https://mirror.ghproxy.com/https://raw.githubusercontent.com/tlc-pack/tophub/main/tophub
 
 
-
+Dynamic batch (input) support
+https://discuss.tvm.apache.org/t/dynamic-batch-input-support/10069

@@ -1,3 +1,6 @@
+# Can we create a standalone executable?
+# # target = "llvm -link-params"
+# https://discuss.tvm.apache.org/t/can-we-create-a-standalone-executable/8773
 
 import numpy as np
 import tvm

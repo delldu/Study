@@ -73,14 +73,14 @@ if __name__ == '__main__':
             onnx_params_path = "{}/cpu_{}.params".format(args.output, os.path.basename(args.input))
 
         # Parsing onnx model
-        # sym, params = relay.frontend.from_onnx(onnx_model, {'input': input_shape}, freeze_params=False)
-        sym, params = relay.frontend.from_onnx(onnx_model, freeze_params=False)
-        sym = relay.transform.DynamicToStatic()(sym)
-        print(sym)
+        # mod, params = relay.frontend.from_onnx(onnx_model, {'input': input_shape}, freeze_params=False)
+        mod, params = relay.frontend.from_onnx(onnx_model, freeze_params=False)
+        mod = relay.transform.DynamicToStatic()(mod)
+        print(mod)
 
         # Create TVM model
         with relay.build_config(opt_level=3):
-            graph, lib, params = relay.build_module.build(sym, target, params=params)
+            graph, lib, params = relay.build_module.build(mod, target, params=params)
 
         # https://discuss.tvm.apache.org/t/relay-frontend-can-relay-take-none-include-shape/5772/2
         # executable = tvm.relay.backend.vm.compile(mod, target, params=params)
