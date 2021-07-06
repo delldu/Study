@@ -45,8 +45,7 @@ from .common import infer_value_simulated as _infer_value_simulated
 from .common import try_infer_value
 from .pytorch_utils import is_version_greater_than
 
-import pdb # xxxx8888
-
+import pdb
 __all__ = ["from_pytorch"]
 
 # This returns a "subgraph" which puts variables whenever
@@ -121,7 +120,6 @@ def _should_construct_dynamic_list(list_construct_node):
     # if add op outputs list, it is dynamic so we need to construct List ADT
     for use in filter(lambda use: use.user.kind() in ["aten::add", "aten::add_"], uses):
         output_type = _get_node_type(use.user)
-
         if output_type == "ListType":
             return True
 
@@ -154,7 +152,6 @@ class PyTorchOpConverter:
             return node.type_annotation
 
         tf = _TypeFinder(types=self.types)
-
         new_node = tf.visit(node)
         fn = _function.Function(list(tf.vars.values()), new_node)
         new_mod = IRModule({"main": fn})
@@ -162,11 +159,9 @@ class PyTorchOpConverter:
             new_mod.update(mod)
         new_mod = transform.RemoveUnusedFunctions()(new_mod)
         new_mod = transform.InferType()(new_mod)
-
         entry = new_mod["main"]
         ty = entry.body.checked_type
         self.types[node] = ty
-
         return self.types[node]
 
     def infer_type_with_prelude(self, val):
@@ -185,18 +180,15 @@ class PyTorchOpConverter:
         adt_lst = nil()
         for elem in reversed(py_lst):
             adt_lst = cons(elem, adt_lst)
-
         return adt_lst
 
     def map_tensor_array_constructor(self, adt_lst, shape):
         static_tensor_array_ops = StaticTensorArrayOps(self.prelude, "float32", shape)
         static_tensor_array_ops.register()
         tensor_create = self.prelude.get_tensor_ctor_static("tensor_constructor", "float32", shape)
-
         return self.prelude.map(tensor_create, adt_lst)
 
     def convert_to_tensor_array(self, adt_lst):
-        # type(adt_lst) -- <class 'tvm.relay.expr.TupleGetItem'>
         _, cons, nil = self.prelude.mod.get_type("List")
         if self.prelude.length(adt_lst) == 0:
             return nil()
@@ -204,8 +196,6 @@ class PyTorchOpConverter:
         checked_type = self.infer_type_with_prelude(self.prelude.hd(adt_lst))
         shape = checked_type.shape
         tensor_array = self.map_tensor_array_constructor(adt_lst, shape)
-
-        # type(tensor_array) -- <class 'tvm.relay.expr.Call'>
         return tensor_array, tuple(shape)
 
     def infer_shape(self, inputs, mod=None):
@@ -215,8 +205,6 @@ class PyTorchOpConverter:
             # Regular operator that outputs tensors
             return get_const_tuple(typ.shape)
         # The return type is not a tensor, for example List
-        pdb.set_trace()
-
         return typ
 
     def infer_shape_with_prelude(self, inputs):
@@ -234,7 +222,8 @@ class PyTorchOpConverter:
 
     def pytorch_promote_types(self, inputs, dtypes):
         """This promotes TVM inputs with TVM dtypes passed like PyTorch would"""
-        pdb.set_trace()
+        # print("xxxx8888 pytorch_promote_types: ", inputs, dtypes)
+
         actual_dtypes = []
         for i, inp in enumerate(inputs):
             if isinstance(inp, _expr.Expr):
@@ -245,19 +234,28 @@ class PyTorchOpConverter:
         dtypes = actual_dtypes
         tensor_dtypes = [dt for inp, dt in zip(inputs, dtypes) if not np.isscalar(inp)]
         non_tensor_inputs = [inp for inp in inputs if np.isscalar(inp)]
+
+        # print("tensor_dtypes: ", tensor_dtypes)
+        # print("non_tensor_inputs: ", non_tensor_inputs)
+
         result_type = _pytorch_result_type(tensor_dtypes, non_tensor_inputs)
-        pdb.set_trace()
+        # print("result_type: ", result_type)
+
+        # print("inputs:", inputs)
+        # print("dtypes:", dtypes)
 
         results = []
         for inp, dt in zip(inputs, dtypes):
-            if np.isscalar(inp):
+            # inp, dt -- ('bilinear', 'str')
+            # np.isscalar(inp) ---- !!!
+            if isinstance(inp, int) or isinstance(inp, float) or isinstance(inp, complex):
                 results.append(_expr.const(inp, dtype=result_type))
             elif dt == result_type:
                 results.append(inp)
             else:
                 results.append(_op.cast(inp, result_type))
 
-        pdb.set_trace()
+        # print("results: --------------- ", results)
         return results
 
     def is_quantized_tensor(self, data):
@@ -270,7 +268,21 @@ class PyTorchOpConverter:
     # Operator implementations
     def make_elemwise(self, name):
         def elemwise(inputs, input_types):
+            # print("xxxx8888 make_elemwise: name = ", name, inputs, input_types)
+
+            # print("name: ", name)
+            # print("inputs[:2], input_types[:2] -->",inputs[:2], input_types[:2])
+            if input_types[0] == 'str':
+                if name == "not_equal":
+                    return _expr.const(inputs[0] != inputs[1])
+                if name == "equal":
+                    return _expr.const(inputs[0] == inputs[1])
+
+            # name:  not_equal
+            # inputs[:2], input_types[:2] --> ['bilinear', 'bilinear'] ['str', 'str']
             data0, data1 = self.pytorch_promote_types(inputs[:2], input_types[:2])
+            # print("data0, data1: ", data0, data1)
+
             return get_relay_op(name)(data0, data1)
 
         return elemwise
@@ -1725,6 +1737,9 @@ class PyTorchOpConverter:
     def make_pad(self, mode):
         def pad(inputs, input_types):
             data = inputs[0]
+            print("make_pad data:", data)
+            print("make_pad pad_list:", inputs[1])
+
             if isinstance(inputs[1], list):
                 pad_list = inputs[1]
             else:
@@ -1754,6 +1769,8 @@ class PyTorchOpConverter:
                     if not isinstance(p, int):
                         p = int(_infer_value(p, {}).numpy())
                     const_paddings[-1].append(p)
+
+            print("const_paddings ---", const_paddings)
 
             if mode == "constant":
                 return _op.nn.pad(data, const_paddings, pad_value=inputs[2], pad_mode=mode)
@@ -1894,9 +1911,6 @@ class PyTorchOpConverter:
     def Float(self, inputs, input_types):
         assert len(inputs) == 1
         return _op.cast(inputs[0], "float32")
-
-    def mm(self, inputs, input_types):
-        return _op.nn.dense(inputs[0], inputs[1])
 
     def bitwise_not(self, inputs, input_types):
         data = inputs[0]
@@ -2343,46 +2357,75 @@ class PyTorchOpConverter:
             weights = _op.full(_expr.const(1), (num_class,), dtype=input_types[0])
         return _op.nn.nll_loss(predictions, targets, weights, reduction, ignore_index)
 
-    def grid_sampler(self, inputs, input_types):
-        # pytorch protype: torch.grid_sampler(input, grid, mode_enum, padding_mode_enum, align_corners)
-        pdb.set_trace()
-
-        return self.infer_shape(inputs[0])
-
-    def list_append(self, inputs, input_types):
-        # pdb.set_trace()
-        # (Pdb) pp inputs
-        # [[], Var(i0, ty=TensorType([2, 3], float32))]
-        # (Pdb) pp input_types
-        # ['ListType', 'float32']
-
-        # (Pdb) pp inputs
-        # [[Var(i0, ty=TensorType([2, 3], float32))],
-        #  Var(i0, ty=TensorType([2, 3], float32))]
-        # (Pdb) pp input_types
-        # ['ListType', 'float32']
-
-        # if input_types[0] == "ListType":
-        #     return self.prelude.concat(inputs[0], inputs[1])
-        # return self.make_elemwise("add")(inputs, input_types)
-
-        print("list_append: ", inputs, " --> ", input_types)
-
-        ret = inputs[0].append(inputs[1])
-        return inputs[0]
-        # return inputs[0].append(inputs[1])
-
-    def im2col(self, inputs, input_types):
-        # input, kernel_size, dilation, padding, stride
-        data = inputs[0]
-        # data.dim() == 4 !!!
-        # input, _pair(kernel_size), _pair(dilation), _pair(padding), _pair(stride)
-        return self.infer_shape(inputs[0])
-
     def flip(self, inputs, input_types):
         data = inputs[0]
         axis = inputs[1]
         return _op.transform.reverse(data, axis=axis[0])
+
+    def grid_sampler(self, inputs, input_types):
+        data = inputs[0]
+        grid = inputs[1]
+
+        # Torch grid shape: [batch, out_height, out_width, 2]
+        # TVM grid shape: [batch, 2, out_height, out_width], so grid need to be converted
+
+        grid = _op.transform.transpose(grid, axes=[0, 3, 1, 2])
+        return _op.image.grid_sample(data, grid, "bilinear", "NCHW")
+
+
+    def aten_is(self, inputs, input_types):
+        # print("xxxx8888 aten_is: ", inputs, input_types)
+        return _expr.const(inputs[0] is inputs[1])
+
+    def aten_isnot(self, inputs, input_types):
+        # print("xxxx8888 aten_isnot: ", inputs, input_types)
+        return _expr.const(inputs[0] is not inputs[1])
+
+    def warn(self, inputs, input_types):
+        print("xxxx8888 warn: -------------------------------------------------", inputs, input_types)
+        logging.warning("aten::warn ...")
+        return None
+
+    def unchecked_cast(self, inputs, input_types):
+        print("xxxx8888 unchecked_cast: ", inputs, input_types)
+        return _expr.const(inputs[0])
+
+    def im2col(self, inputs, input_types):
+        from tvm.topi.nn import get_pad_tuple
+
+        #  F.unfold(input, 3, dilation=1, padding=1, stride=1)
+        print("xxxx8888 im2col: ", inputs, input_types)
+        # [Var(i0, ty=TensorType([2, 3, 32, 32], float32)), [3, 3], [1, 1], [1, 1], [1, 1]]
+        #  ['float32', 'ListType', 'ListType', 'ListType', 'ListType']
+        # input, _pair(kernel_size),_pair(dilation), _pair(padding), _pair(stride)
+
+        data = inputs[0]
+        kernel_size = inputs[1]
+        dilation = inputs[2]
+        padding = inputs[3] + inputs[3]
+        stride = inputs[4]
+
+        padding_inputs = [data, padding, 3.5]
+        padding_input_types = [input_types[0], input_types[3], 'float32']
+        return self.make_pad("constant")(padding_inputs, padding_input_types)
+        # pdb.set_trace()
+
+        # return pad_data
+
+        # return _expr.const(data)
+
+    def dim(self, inputs, input_types):
+        print("xxxx8888 dim: ", inputs, input_types)
+        shape = self.infer_shape_with_prelude(inputs[0])
+        return len(shape)
+
+    def uninitialized(self, inputs, input_types):
+        # The following statement comes from pytorch source code, so we flow it ^=^
+        # Unitialized ivalues show up in no-ops when the compiler can prove a
+        # value will never be used. Just return false on any equality comparison.
+
+        #  /home/dell/anaconda3/envs/pytorch/lib/python3.6/site-packages/torch/nn/functional.py 3624
+        return False
 
     # Operator mappings
     def create_convert_map(self):
@@ -2598,10 +2641,15 @@ class PyTorchOpConverter:
             "aten::_unique2": self.unique,
             "aten::nll_loss": self.nll_loss,
             "aten::nll_loss2d": self.nll_loss,
-            # "aten::grid_sampler": self.grid_sampler,
-            "aten::append": self.list_append,
             "aten::flip": self.flip,
-            # "aten::im2col": self.im2col,
+            "aten::grid_sampler": self.grid_sampler,
+            "aten::__is__": self.aten_is,
+            "aten::__isnot__": self.aten_isnot,
+            # "aten::warn": self.warn,
+            "prim::unchecked_cast": self.unchecked_cast,
+            "aten::im2col": self.im2col,
+            "aten::dim": self.dim,
+            # "prim::Uninitialized": self.uninitialized,
         }
 
     def update_convert_map(self, custom_map):
@@ -2619,6 +2667,7 @@ class PyTorchOpConverter:
             "prim::RaiseException",
             "prim::If",
             "prim::Loop",
+            "prim::Uninitialized",
         ]
         known_ops += list(self.convert_map.keys())
         known_ops += list(qnn_torch.convert_map.keys())
@@ -2631,17 +2680,30 @@ class PyTorchOpConverter:
 
     def convert_block(self, block, outputs):
         """Translate Torch "Block", used for prim::If and prim::Loop"""
-
         ops = _get_operator_nodes(block.nodes())
         ret_names = _get_input_names(block.returnNode())
+        if isinstance(ops, list) and len(ops) == 0:
+            return None
         return self.convert_operators(ops, outputs, ret_names)
 
     def convert_if(self, if_node, outputs):
         """Translate Torch prim::If to Relay If"""
         cond = outputs[if_node.inputsAt(0).debugName()]
         blocks = list(if_node.blocks())
+
+
+        print("@@@@@@@@@@@@@@@ true_block:", blocks[0])
+        print("@@@@@@@@@@@@@@@@@@ false_block:", blocks[1])
+
         true_branch = self.convert_block(blocks[0], outputs)
         false_branch = self.convert_block(blocks[1], outputs)
+
+        print("@@@@@@@@@@@@@@@ true_branch:", true_branch)
+        print("@@@@@@@@@@@@@@@@@@ false_branch:", false_branch)
+        if true_branch is None:
+            true_branch = false_branch
+        if false_branch is None:
+            false_branch = true_branch
         assert len(true_branch) == 1 and len(false_branch) == 1
         return _expr.If(cond, true_branch[0], false_branch[0])
 
@@ -2779,14 +2841,7 @@ class PyTorchOpConverter:
         """Convert each Torch IR operators to Relay equivalent"""
         for node_name, op_node in operators:
             operator = op_node.kind()
-
-            print("")
-            print("----------------------------")
-            print("node_name:", node_name)
-            print("op_node: ", op_node, "==>", operator)
-
             inputs = _get_op_inputs(op_node, outputs)
-            print("inputs:", inputs)
 
             if operator == "prim::Constant":
                 outputs[node_name] = _get_constant(op_node)
@@ -2805,7 +2860,7 @@ class PyTorchOpConverter:
                 else:
                     unpacked = _unpack_tuple(inputs[0])
                 outputs.update(zip(_get_output_names(op_node), unpacked))
-            elif operator == "prim::prim::RaiseException":
+            elif operator == "prim::RaiseException":
                 logging.warning("raising exceptions is ignored")
                 outputs[node_name] = None
             elif operator == "prim::If":
@@ -2816,11 +2871,27 @@ class PyTorchOpConverter:
                 unpacked_names = _get_output_names(op_node)
                 assert len(loop_out) == len(unpacked_names)
                 outputs.update(zip(unpacked_names, loop_out))
+            elif operator == "prim::Uninitialized":
+                # logging.warning("Uninitialized is ignored")
+                print("We need nothing to do for prim::Uninitialized ... node_name == ", node_name)
+                outputs[node_name] = None
             else:
+                print("")
+                print("--------------------------------------------------{")
+                print("node_name:", node_name, "op_node:", op_node, "operator:", operator)
+                print("inputs:", inputs)
+
                 relay_op = self.convert_map[operator]
+                print("==>relay_op: ", operator)
+                print("  relay_op inputs: ", inputs)
+                print("  relay_op input_types: ",  _get_input_types(op_node, outputs, default_dtype=self.default_dtype))
+
                 relay_out = relay_op(
                     inputs, _get_input_types(op_node, outputs, default_dtype=self.default_dtype)
                 )
+                print("relay_out: ",  relay_out)
+                print("relay_out type: ",  type(relay_out))
+
                 self.record_output_type(relay_out)
 
                 if isinstance(relay_out, tuple):
@@ -2831,11 +2902,8 @@ class PyTorchOpConverter:
                 else:
                     assert op_node.outputsSize() == 1
                     outputs[node_name] = relay_out
-            print("outputs:", outputs)
-
-        print("")
-        print("..................................................")
-        print("Last result:", [_wrap_const(outputs[ret_name]) for ret_name in ret_names])
+                print("outputs:", outputs[node_name])
+                print("}-------------------------------------------------------------")
 
         return [_wrap_const(outputs[ret_name]) for ret_name in ret_names]
 
@@ -2872,9 +2940,13 @@ def _pytorch_result_type(dtypes, non_tensor_inputs):
     else:
         result_type = "bool"  # this is the smallest type...
     for inp in non_tensor_inputs:
-        result_type = _convert_data_type(
-            str(torch.result_type(torch.zeros((), dtype=dtype_map[result_type]), inp))
-        )
+        # xxxx8888
+        if isinstance(inp, str):
+            result_type = "str"
+        else:        
+            result_type = _convert_data_type(
+                str(torch.result_type(torch.zeros((), dtype=dtype_map[result_type]), inp))
+            )
     return result_type
 
 
@@ -2999,6 +3071,9 @@ def _get_output_names(node):
 
 
 def _get_input_names(node_or_graph):
+    # print("     _get_input_names(node_or_graph): ", node_or_graph)
+    # for inp in node_or_graph.inputs():
+    #     print("input: ", inp, "debugType: ", type(inp), "debugName:", inp.debugName())
     return [inp.debugName() for inp in node_or_graph.inputs()]
 
 
@@ -3035,6 +3110,8 @@ def _getattr_full_name(getattrs):
 
 def _get_pytorch_value_type(typ, default_dtype="float32"):
     kind = typ.kind()
+    # print("xxxx8888 _get_pytorch_value_type --> kind=", kind, "kind type=", type(kind))
+
     if kind == "TensorType":
         if typ.scalarType() is None:
             # Tensor's type can be unknown if we use torch.jit.script(...)
@@ -3051,6 +3128,7 @@ def _get_pytorch_value_type(typ, default_dtype="float32"):
         dtype = pt_dtype if pt_dtype == "OptionalType" else _convert_data_type(pt_dtype)
         return dtype
     else:
+        # return "UnsupportedType", xxxx8888
         return "UnsupportedType"
 
 
@@ -3376,7 +3454,6 @@ def from_pytorch(script_module, input_infos, custom_convert_map=None, default_dt
     graph = script_module.graph.copy()
     _run_jit_passes(graph)
 
-    # custom_convert_map -- None
     if custom_convert_map:
         converter.update_convert_map(custom_convert_map)
 
@@ -3417,6 +3494,8 @@ def from_pytorch(script_module, input_infos, custom_convert_map=None, default_dt
         else:
             func_args.append(arg)
     func_args = data_inputs + func_args
+
+    print("xxxx8888 from_pytorch func_args:", func_args, "ret: ", ret)
 
     mod["main"] = tvm.relay.Function(func_args, ret)
 
