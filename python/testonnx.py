@@ -31,10 +31,9 @@ import torch
 
 def to_numpy(tensor):
     return (
-        tensor.detach().cpu().numpy()
-        if tensor.requires_grad
-        else tensor.cpu().numpy()
+        tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
     )
+
 
 def onnx_load(onnx_file):
     session_options = onnxruntime.SessionOptions()
@@ -76,7 +75,7 @@ class TestModel(nn.Module):
 
     def forward(self, input):
         B, C, H, W = input.shape
-        return input.view(B*C, H, W)
+        return input.view(B * C, H, W)
 
 
 if __name__ == "__main__":
@@ -119,7 +118,7 @@ if __name__ == "__main__":
         input_names = ["input"]
         output_names = ["output"]
         dynamic_axes = {
-            "input": {0: "batch", 1:"channel", 2: "height", 3: "width"},
+            "input": {0: "batch", 1: "channel", 2: "height", 3: "width"},
         }
 
         torch.onnx.export(
@@ -132,7 +131,7 @@ if __name__ == "__main__":
             opset_version=11,
             keep_initializers_as_inputs=False,
             export_params=True,
-            dynamic_axes=dynamic_axes
+            dynamic_axes=dynamic_axes,
         )
 
         # 3. Optimize model
@@ -143,7 +142,6 @@ if __name__ == "__main__":
 
         # 4. Visual model
         # python -c "import netron; netron.start('/tmp/test.onnx')"
-
 
     def verify_onnx():
         """Verify onnx model."""

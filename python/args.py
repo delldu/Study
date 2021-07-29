@@ -17,10 +17,9 @@ class Args(collections.OrderedDict):
         del self[name]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     abc = Args()
-    abc.fff = 'fff'
-    abc.ggg = 'ggg'
-    abc.abc = '123'
+    abc.fff = "fff"
+    abc.ggg = "ggg"
+    abc.abc = "123"
     print(abc.fff, abc.ggg, abc.abc)
-

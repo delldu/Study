@@ -3,38 +3,42 @@ import time
 from tqdm import tqdm
 
 import torch
-model = torch.hub.load('pytorch/vision:v0.6.0', 'deeplabv3_resnet101', pretrained=True)
+
+model = torch.hub.load("pytorch/vision:v0.6.0", "deeplabv3_resnet101", pretrained=True)
 model.eval()
 print(model)
 
 # sample execution (requires torchvision)
 from PIL import Image
 from torchvision import transforms
-#input_image = Image.open(filename)
-filename="dog.jpg"
+
+# input_image = Image.open(filename)
+filename = "dog.jpg"
 input_image = Image.open(filename).convert("RGB")
 input_image.show()
 
-preprocess = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
+preprocess = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
 
 input_tensor = preprocess(input_image)
-input_batch = input_tensor.unsqueeze(0) # create a mini-batch as expected by the model
+input_batch = input_tensor.unsqueeze(0)  # create a mini-batch as expected by the model
 
 # move the input and model to GPU for speed if available
 if torch.cuda.is_available():
-    input_batch = input_batch.to('cuda')
-    model.to('cuda')
+    input_batch = input_batch.to("cuda")
+    model.to("cuda")
 
 model.eval()
 start = time.time()
 
 for i in tqdm(range(100)):
     with torch.no_grad():
-        output = model(input_batch)['out'][0]
-    
+        output = model(input_batch)["out"][0]
+
 print("Speend time: {}".format(time.time() - start))
 
 
@@ -49,7 +53,8 @@ r = Image.fromarray(output_predictions.byte().cpu().numpy()).resize(input_image.
 r.putpalette(colors)
 
 import matplotlib.pyplot as plt
+
 plt.imshow(r)
 plt.show()
 
-#pdb.set_trace()
+# pdb.set_trace()

@@ -1,11 +1,11 @@
 #! /usr/bin/env python
-#coding=utf-8
+# coding=utf-8
 #
-#/************************************************************************************
-#***
-#***    File Author: Dell, 2019年 08月 20日 星期二 20:57:13 CST
-#***
-#************************************************************************************/
+# /************************************************************************************
+# ***
+# ***    File Author: Dell, 2019年 08月 20日 星期二 20:57:13 CST
+# ***
+# ************************************************************************************/
 #
 # https://www.cnblogs.com/guoyaohua/p/transformer.html
 # https://github.com/harvardnlp/annotated-transformer
@@ -25,6 +25,7 @@ from torch.autograd import Variable
 import matplotlib.pyplot as plt
 
 import seaborn
+
 seaborn.set_context(context="talk")
 
 
@@ -186,7 +187,7 @@ class DecoderLayer(nn.Module):
 def subsequent_mask(size):
     "Mask out subsequent positions."
     attn_shape = (1, size, size)
-    subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
+    subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype("uint8")
     return torch.from_numpy(subsequent_mask) == 0
 
 
@@ -239,7 +240,6 @@ class MultiHeadedAttention(nn.Module):
         # d_model = 512
         # dropout = 0.1
 
-
     def forward(self, query, key, value, mask=None):
         "Implements Figure 2"
         if mask is not None:
@@ -257,8 +257,7 @@ class MultiHeadedAttention(nn.Module):
             for l, x in zip(self.linears, (query, key, value))
         ]
 
-        x, self.attn = attention(
-            query, key, value, mask=mask, dropout=self.dropout)
+        x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)
 
         x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.h * self.d_k)
         # pdb.set_trace()
@@ -306,12 +305,12 @@ class PositionalEncoding(nn.Module):
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len).unsqueeze(1).float()
         div_term = torch.exp(
-            torch.arange(0, d_model, 2).float() *
-            -(math.log(10000.0) / d_model))
+            torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)
+        )
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
+        self.register_buffer("pe", pe)
         # pdb.set_trace()
         # (Pdb) a
         # self = PositionalEncoding(
@@ -332,7 +331,7 @@ class PositionalEncoding(nn.Module):
         # torch.Size([10])
 
     def forward(self, x):
-        x = x + Variable(self.pe[:, :x.size(1)], requires_grad=False)
+        x = x + Variable(self.pe[:, : x.size(1)], requires_grad=False)
         return self.dropout(x)
 
 
@@ -346,27 +345,29 @@ plt.show()
 # pdb.set_trace()
 
 
-def make_model(src_vocab,
-               tgt_vocab,
-               N=6,
-               d_model=512,
-               d_ff=2048,
-               h=8,
-               dropout=0.1):
+def make_model(src_vocab, tgt_vocab, N=6, d_model=512, d_ff=2048, h=8, dropout=0.1):
     "Construct a model from hyperparameters."
     attn = MultiHeadedAttention(h, d_model)
     ff = PositionwiseFeedForward(d_model, d_ff, dropout)
     position = PositionalEncoding(d_model, dropout)
     model = EncoderDecoder(
         Encoder(
-            EncoderLayer(d_model, copy.deepcopy(attn), copy.deepcopy(ff),
-                         dropout), N),
+            EncoderLayer(d_model, copy.deepcopy(attn), copy.deepcopy(ff), dropout), N
+        ),
         Decoder(
-            DecoderLayer(d_model, copy.deepcopy(attn), copy.deepcopy(attn),
-                         copy.deepcopy(ff), dropout), N),
+            DecoderLayer(
+                d_model,
+                copy.deepcopy(attn),
+                copy.deepcopy(attn),
+                copy.deepcopy(ff),
+                dropout,
+            ),
+            N,
+        ),
         nn.Sequential(Embeddings(src_vocab, d_model), copy.deepcopy(position)),
         nn.Sequential(Embeddings(tgt_vocab, d_model), copy.deepcopy(position)),
-        Generator(d_model, tgt_vocab))
+        Generator(d_model, tgt_vocab),
+    )
 
     for p in model.parameters():
         if p.dim() > 1:
@@ -405,7 +406,6 @@ class Batch:
         # (Pdb) pp self.src_mask.shape
         # torch.Size([30, 1, 10])
 
-
     @staticmethod
     def make_std_mask(tgt, pad):
         "Create a mask to hide padding and future words."
@@ -413,7 +413,8 @@ class Batch:
         # (Pdb) (tgt != pad).unsqueeze(-2).shape
         # torch.Size([30, 1, 9])
         tgt_mask = tgt_mask & Variable(
-            subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
+            subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data)
+        )
         # pdb.set_trace()
 
         # (Pdb) subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data)
@@ -444,8 +445,7 @@ def run_epoch(data_iter, model, loss_compute):
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
-        out = model.forward(batch.src, batch.trg, batch.src_mask,
-                            batch.trg_mask)
+        out = model.forward(batch.src, batch.trg, batch.src_mask, batch.trg_mask)
         loss = loss_compute(out, batch.trg_y, batch.ntokens)
 
         total_loss += loss
@@ -459,8 +459,10 @@ def run_epoch(data_iter, model, loss_compute):
                 elapsed = 1
             # pdb.set_trace()
 
-            print("Epoch Step: %d Loss: %f Tokens per Sec: %.2f" %
-                  (i, loss / batch.ntokens, tokens / elapsed))
+            print(
+                "Epoch Step: %d Loss: %f Tokens per Sec: %.2f"
+                % (i, loss / batch.ntokens, tokens / elapsed)
+            )
             start = time.time()
             tokens = 0
 
@@ -500,7 +502,7 @@ class NoamOpt:
         self._step += 1
         rate = self.rate()
         for p in self.optimizer.param_groups:
-            p['lr'] = rate
+            p["lr"] = rate
         self._rate = rate
         self.optimizer.step()
 
@@ -508,26 +510,27 @@ class NoamOpt:
         "Implement `lrate` above"
         if step is None:
             step = self._step
-        return self.factor * (self.model_size**
-                              (-0.5) * min(step**
-                                           (-0.5), step * self.warmup**(-1.5)))
+        return self.factor * (
+            self.model_size ** (-0.5)
+            * min(step ** (-0.5), step * self.warmup ** (-1.5))
+        )
 
 
 def get_std_opt(model):
     return NoamOpt(
-        model.src_embed[0].d_model, 2, 4000,
-        torch.optim.Adam(
-            model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
+        model.src_embed[0].d_model,
+        2,
+        4000,
+        torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9),
+    )
 
 
 opts = [
     NoamOpt(512, 1, 4000, None),
     NoamOpt(512, 1, 8000, None),
-    NoamOpt(256, 1, 4000, None)
+    NoamOpt(256, 1, 4000, None),
 ]
-plt.plot(
-    np.arange(1, 20000),
-    [[opt.rate(i) for opt in opts] for i in range(1, 20000)])
+plt.plot(np.arange(1, 20000), [[opt.rate(i) for opt in opts] for i in range(1, 20000)])
 plt.legend(["512:4000", "512:8000", "256:4000"])
 plt.show()
 
@@ -552,7 +555,6 @@ class LabelSmoothing(nn.Module):
         # size = 5
         # padding_idx = 0
         # smoothing = 0.4
-
 
     def forward(self, x, target):
         assert x.size(1) == self.size
@@ -580,8 +582,9 @@ class LabelSmoothing(nn.Module):
 
 
 crit = LabelSmoothing(5, 0, 0.4)
-predict = torch.FloatTensor([[0, 0.2, 0.7, 0.1, 0], [0, 0.2, 0.7, 0.1, 0],
-                             [0, 0.2, 0.7, 0.1, 0]])
+predict = torch.FloatTensor(
+    [[0, 0.2, 0.7, 0.1, 0], [0, 0.2, 0.7, 0.1, 0], [0, 0.2, 0.7, 0.1, 0]]
+)
 v = crit(Variable(predict.log()), Variable(torch.LongTensor([2, 1, 0])))
 
 plt.imshow(crit.true_dist)
@@ -593,11 +596,12 @@ crit = LabelSmoothing(5, 0, 0.1)
 
 def loss(x):
     d = x + 3 * 1
-    predict = torch.FloatTensor([
-        [0, x / d, 1 / d, 1 / d, 1 / d],
-    ])
-    return crit(Variable(predict.log()),
-                Variable(torch.LongTensor([1]))).item()
+    predict = torch.FloatTensor(
+        [
+            [0, x / d, 1 / d, 1 / d, 1 / d],
+        ]
+    )
+    return crit(Variable(predict.log()), Variable(torch.LongTensor([1]))).item()
 
 
 # data[0]
@@ -628,8 +632,10 @@ class SimpleLossCompute:
 
     def __call__(self, x, y, norm):
         x = self.generator(x)
-        loss = self.criterion(x.contiguous().view(-1, x.size(-1)),
-                              y.contiguous().view(-1)) / norm
+        loss = (
+            self.criterion(x.contiguous().view(-1, x.size(-1)), y.contiguous().view(-1))
+            / norm
+        )
         loss.backward()
         if self.opt is not None:
             self.opt.step()
@@ -646,20 +652,28 @@ criterion = LabelSmoothing(size=V, padding_idx=0, smoothing=0.0)
 model = make_model(V, V, N=2)
 
 model_opt = NoamOpt(
-    model.src_embed[0].d_model, 1, 400,
-    torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
+    model.src_embed[0].d_model,
+    1,
+    400,
+    torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9),
+)
 
 for epoch in range(10):
     model.train()
     run_epoch(
-        data_gen(V, 30, 20), model,
-        SimpleLossCompute(model.generator, criterion, model_opt))
+        data_gen(V, 30, 20),
+        model,
+        SimpleLossCompute(model.generator, criterion, model_opt),
+    )
 
     model.eval()
     print(
         run_epoch(
-            data_gen(V, 30, 5), model,
-            SimpleLossCompute(model.generator, criterion, None)))
+            data_gen(V, 30, 5),
+            model,
+            SimpleLossCompute(model.generator, criterion, None),
+        )
+    )
 
 
 def greedy_decode(model, src, src_mask, max_len, start_symbol):
@@ -667,13 +681,15 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
     ys = torch.ones(1, 1).fill_(start_symbol).type_as(src.data)
     for i in range(max_len - 1):
         out = model.decode(
-            memory, src_mask, Variable(ys),
-            Variable(subsequent_mask(ys.size(1)).type_as(src.data)))
+            memory,
+            src_mask,
+            Variable(ys),
+            Variable(subsequent_mask(ys.size(1)).type_as(src.data)),
+        )
         prob = model.generator(out[:, -1])
         _, next_word = torch.max(prob, dim=1)
         next_word = next_word.data[0]
-        ys = torch.cat(
-            [ys, torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
+        ys = torch.cat([ys, torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
 
     pdb.set_trace()
     # src = tensor([[ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10]])

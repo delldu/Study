@@ -90,25 +90,27 @@ def diff(args):
     diff_img.show()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Compare two images')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Compare two images")
     parser.add_argument("-a", "--first", help="first image", required=True)
     parser.add_argument("-b", "--second", help="second image", required=True)
-    parser.add_argument("-o",
-                        "--output",
-                        help="output image, defaut: output.png",
-                        type=str,
-                        default="output.png")
-    parser.add_argument("-t",
-                        "--threshold",
-                        help="Threshold, default: 64.0",
-                        type=float,
-                        default=64.0)
-    parser.add_argument("-m",
-                        "--mode",
-                        help="color mode, default: RGB, option RGBA",
-                        type=str,
-                        default="RGB")
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="output image, defaut: output.png",
+        type=str,
+        default="output.png",
+    )
+    parser.add_argument(
+        "-t", "--threshold", help="Threshold, default: 64.0", type=float, default=64.0
+    )
+    parser.add_argument(
+        "-m",
+        "--mode",
+        help="color mode, default: RGB, option RGBA",
+        type=str,
+        default="RGB",
+    )
     args = parser.parse_args()
 
     diff(args)

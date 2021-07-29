@@ -3,7 +3,7 @@
 
 from collections import defaultdict
 
-s = 'mississippi'
+s = "mississippi"
 d = defaultdict(int)
 for k in s:
     d[k] += 1

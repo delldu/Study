@@ -17,7 +17,7 @@ def image_cut(image_filename):
     img = cv2.resize(img, (320, 480))
 
     plt.subplot(1, 2, 1)
-    plt.title('original image ')
+    plt.title("original image ")
     plt.xticks([])
     plt.yticks([])
     plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
@@ -30,12 +30,12 @@ def image_cut(image_filename):
     cv2.grabCut(img, mask, rect, bgmodel, fgmodel, 32, cv2.GC_INIT_WITH_RECT)
 
     # 0 -- cv2.GC_BGD, 1 -- cv2.GC_FGD, 2 -- cv2.GC_PR_BGD, 3 -- cv2.GC_PR_FGD
-    mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+    mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype("uint8")
 
     img = img * mask2[:, :, np.newaxis]
 
     plt.subplot(1, 2, 2)
-    plt.title('target image')
+    plt.title("target image")
     plt.xticks([])
     plt.yticks([])
     plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
@@ -43,5 +43,5 @@ def image_cut(image_filename):
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     image_cut(sys.argv[1])
