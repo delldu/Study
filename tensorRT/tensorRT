@@ -27,10 +27,11 @@ build()
 	trtexec --onnx=$1 \
 		--explicitBatch \
 		--fp16 \
-		--workspace=1024 \
-		--minShapes=input:1x4x256x256 \
-		--optShapes=input:1x4x512x512 \
-		--maxShapes=input:1x4x1024x2048 \
+		--buildOnly \
+		--workspace=4096 \
+		--minShapes=input:1x3x256x256 \
+		--optShapes=input:1x3x512x512 \
+		--maxShapes=input:1x3x1024x2048 \
 		--saveEngine=$2
 }
 
@@ -38,7 +39,7 @@ run()
 {
 	[ "$1" == ""] && usage
 	trtexec \
-		--shapes=input:1x4x1024x1024 \
+		--shapes=input:1x3x1024x1024 \
 		--loadEngine=$1
 }
 

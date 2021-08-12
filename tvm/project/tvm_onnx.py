@@ -54,8 +54,8 @@ if __name__ == '__main__':
     else:
         target = tvm.target.Target("llvm", host='llvm')
     device = tvm.device(str(target), 0)        
-    input_shape = [1, 3, 512, 512]
-    # input_shape = (1, 3, tvm.relay.Any(), tvm.relay.Any())
+    # input_shape = [1, 3, 512, 512]
+    input_shape = (1, 3, tvm.relay.Any(), tvm.relay.Any())
 
     def tvm_export():
         """Export onnx model."""
@@ -73,14 +73,18 @@ if __name__ == '__main__':
             onnx_params_path = "{}/cpu_{}.params".format(args.output, os.path.basename(args.input))
 
         # Parsing onnx model
-        # mod, params = relay.frontend.from_onnx(onnx_model, {'input': input_shape}, freeze_params=False)
-        mod, params = relay.frontend.from_onnx(onnx_model, freeze_params=False)
-        mod = relay.transform.DynamicToStatic()(mod)
+        mod, params = relay.frontend.from_onnx(onnx_model, {'input': input_shape}, freeze_params=False)
+        # mod, params = relay.frontend.from_onnx(onnx_model, freeze_params=False)
+        # mod = relay.transform.DynamicToStatic()(mod)
         print(mod)
 
         # Create TVM model
-        with relay.build_config(opt_level=3):
+        # with relay.build_config(opt_level=3):
+        #     graph, lib, params = relay.build_module.build(mod, target, params=params)
+
+        with tvm.transform.PassContext(opt_level=3):
             graph, lib, params = relay.build_module.build(mod, target, params=params)
+
 
         # https://discuss.tvm.apache.org/t/relay-frontend-can-relay-take-none-include-shape/5772/2
         # executable = tvm.relay.backend.vm.compile(mod, target, params=params)
@@ -164,7 +168,9 @@ if __name__ == '__main__':
         # ***
         # ***    MS: Define Input Data
         # ***
-        # ************************************************************************************/        
+        # ************************************************************************************/
+
+        # input_shape = [1, 3, 256, 256]
         input = tvm.nd.array((np.random.uniform(size=input_shape).astype("float32")), device)
 
         module.set_input("input", input)
