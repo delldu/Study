@@ -67,9 +67,9 @@
 
 // Uncomment the following lines to enable RPC
 #ifdef CONFIG_RPC
-	#include "src/runtime/rpc/rpc_session.cc"
-	#include "src/runtime/rpc/rpc_event_impl.cc"
-	#include "src/runtime/rpc/rpc_server_env.cc"
+#include "src/runtime/rpc/rpc_event_impl.cc"
+#include "src/runtime/rpc/rpc_server_env.cc"
+#include "src/runtime/rpc/rpc_session.cc"
 #endif
 
 // These macros enables the device API when uncommented.
@@ -79,18 +79,18 @@
 
 // Uncomment the following lines to enable Metal
 #ifdef CONFIG_METAL
-	#include "src/runtime/metal/metal_device_api.mm"
-	#include "src/runtime/metal/metal_module.mm"
+#include "src/runtime/metal/metal_device_api.mm"
+#include "src/runtime/metal/metal_module.mm"
 #endif
 
 // Uncomment the following lines to enable CUDA
 #ifdef CONFIG_CUDA
-	#include "src/runtime/cuda/cuda_device_api.cc"
-	#include "src/runtime/cuda/cuda_module.cc"
+#include "src/runtime/cuda/cuda_device_api.cc"
+#include "src/runtime/cuda/cuda_module.cc"
 #endif
 
 // Uncomment the following lines to enable OpenCL
 #ifdef CONFIG_OPENCL
-	#include "src/runtime/opencl/opencl_device_api.cc"
-	#include "src/runtime/opencl/opencl_module.cc"
+#include "src/runtime/opencl/opencl_device_api.cc"
+#include "src/runtime/opencl/opencl_module.cc"
 #endif
