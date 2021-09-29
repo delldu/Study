@@ -66,8 +66,8 @@ struct RuntimeEngine {
   tvm::runtime::PackedFunc get_output;
 };
 
-RuntimeEngine *create_engine_x(char *so_file_name, std::string json_data,
-                               std::string params_data, int use_gpu) {
+RuntimeEngine *create_engine(char *so_file_name, std::string json_data,
+                             std::string params_data, int use_gpu) {
   RuntimeEngine *engine = NULL;
 
   // load in the library
@@ -201,7 +201,7 @@ RuntimeEngine *create_engine_from_tar(char *model_name, int use_gpu) {
   if (ret == RET_OK) {
     std::string params_data(params_buff, params_size);
     std::string json_data(json_buff, json_size);
-    engine = create_engine_x(so_filename, json_data, params_data, use_gpu);
+    engine = create_engine(so_filename, json_data, params_data, use_gpu);
   }
 
   // Clean ...
@@ -216,8 +216,9 @@ RuntimeEngine *create_engine_from_tar(char *model_name, int use_gpu) {
   return engine;
 }
 
-RuntimeEngine *create_engine(char *so_file_name, char *json_file_name,
-                             char *params_file_name, int use_gpu) {
+RuntimeEngine *create_engine_from_files(char *so_file_name,
+                                        char *json_file_name,
+                                        char *params_file_name, int use_gpu) {
   std::ifstream json_in(json_file_name, std::ios::in);
   if (json_in.fail()) {
     throw std::runtime_error("could not open json file");
@@ -234,7 +235,7 @@ RuntimeEngine *create_engine(char *so_file_name, char *json_file_name,
                           std::istreambuf_iterator<char>());
   params_in.close();
 
-  return create_engine_x(so_file_name, json_data, params_data, use_gpu);
+  return create_engine(so_file_name, json_data, params_data, use_gpu);
 }
 
 TENSOR *engine_forward(RuntimeEngine *engine, TENSOR *input) {
@@ -385,8 +386,8 @@ int server(char *endpoint, char *model_name, int use_gpu) {
              "models/cpu_%s.params", model_name);
   }
 
-  engine =
-      create_engine(so_file_name, json_file_name, params_file_name, use_gpu);
+  engine = create_engine_from_files(so_file_name, json_file_name,
+                                    params_file_name, use_gpu);
 
   if (engine == NULL) {
     syslog_error("Create Engine.");
