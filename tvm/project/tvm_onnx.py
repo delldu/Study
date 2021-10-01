@@ -1,4 +1,4 @@
-"""Onnx Model Tools."""# coding=utf-8
+"""Onnx Model Tools."""  # coding=utf-8
 #
 # /************************************************************************************
 # ***
@@ -16,12 +16,14 @@ import time
 import os
 import onnx
 import tvm
-import tarfile 
+import tarfile
 from tvm import relay
 from string import Template
+import onnxruntime
 
-def value_info(t):
-    ''' parsing tensor value information'''
+
+def value_info_parse(t):
+    """parsing tensor value information"""
     # make_tensor_value_info(name,elem_type,shape,doc_string="",shape_denotation=None) --> ValueInfoProto
 
     dynamic = False
@@ -38,32 +40,15 @@ def value_info(t):
     return name, etype, dims, dynamic
 
 
-def file_name(filename):
-    '''return file base and ext '''
+def file_name_parse(filename):
+    """return file base and ext"""
     return os.path.splitext(os.path.basename(filename))
 
-def model_tar(onnx_file, output):
-    # with open(f"{}/readme.txt", "w") as f:
-    #     f.write(f"{onnx_file}")
 
-    file_list = ["readme.txt", "model.so", "model.json", "model.params"]
-    for file in file_list:
-        fullpath = f"{output}/{file}"
-        assert os.path.exists(fullpath), f"file {fullpath} not exist."
-
-    base, _ = file_name(onnx_file)
-    tar_filename = f"{output}/{base}.tar" 
-
-    t = tarfile.open(tar_filename, "w:gz")
-    for file in file_list:
-        fullpath = f"{output}/{file}"
-        t.add(fullpath)
-    t.close() 
-
-
-def onnx_list(onnx_file):
-    list_template = Template("""
-        Model Summary:
+def get_onnx_info(model):
+    template = Template(
+        """
+        Model Information:
             Domain: ${domain}
             Producer: ${producer_name} ${producer_version}
             Model Version: ${model_version}
@@ -74,100 +59,241 @@ def onnx_list(onnx_file):
             ${input_list}
         Outputs:
             ${output_list}
-        """)
+        """
+    )
 
-
-    model = onnx.load(onnx_file)
     domain = model.domain
-    if (len(domain) < 1):
+    if len(domain) < 1:
         domain = "ai.onnx"
 
     opset = [e.version for e in model.opset_import]
     input_list = []
     for t in model.graph.input:
-        name, _, dims, _ = value_info(t)
+        name, _, dims, _ = value_info_parse(t)
         input_list.append(f"        {name}: {dims}")
     output_list = []
     for t in model.graph.output:
-        name, _, dims, _ = value_info(t)
+        name, _, dims, _ = value_info_parse(t)
         output_list.append(f"        {name}: {dims}")
 
-    s = list_template.substitute(
+    s = template.substitute(
         domain=domain,
         producer_name=model.producer_name,
-        producer_version = model.producer_version,
+        producer_version=model.producer_version,
         model_version=model.model_version,
         ir_version=model.ir_version,
         opset=opset,
         graph_name=model.graph.name,
         input_list="\n".join(input_list),
-        output_list="\n".join(output_list)
+        output_list="\n".join(output_list),
     )
-    # remove first 8 space
+    # remove first 8 space from template
     s = s.replace(" " * 8, "").strip()
+    return s
+
+
+def get_onnx_shape(model):
+    """Just input shape"""
+    shape = {}
+    for t in model.graph.input:
+        name, etype, dims, dynamic = value_info_parse(t)
+        shape[name] = dims
+    return shape
+
+
+def onnx_list(onnx_filename):
+    model = onnx.load(onnx_filename)
+    onnx.checker.check_model(onnx_model)
+    s = get_onnx_info(model)
     print(s)
 
-def onnx_edit(onnx_file, output, shape):
-    base, _ = file_name(onnx_file)
-    output_filename = f"{output}/{base}.onnx"
-    assert onnx_file != output_filename, "Warning: I/O file name is same"
 
-    # Convert input.height=224, ... to {"input.height": 244, }
-    shape_dict = {}
-    for e in shape.split(','):
-        k, v = e.split('=')
-        assert v is not None and v.isdigit(), "Warning: invalid shape."
-        shape_dict[k.strip()] = int(v)
-    assert shape_dict is not None, "Warning: shape is empty."
+def build_onnx(onnx_filename, device, shape, output):
+    onnx_model = onnx.load(onnx_filename)
+    onnx.checker.check_model(onnx_model)
+    device = device.lower()
+    shape = shape.replace(" ", "").strip()  # remove blanks
+    base, _ = file_name_parse(onnx_filename)
+    tar_filename = f"{output}/{base}.tar"
 
-    def update_dims(tensor):
-        shape = tensor.type.tensor_type.shape
-        for e in shape.dim:
-            if e.dim_value > 0:
-                continue
-            key = tensor.name + "." + e.dim_param
-            if key in shape_dict.keys():
-                e.dim_value = shape_dict[key]
-            else:
-                print(f"Warning: missing {key} shape")
+    def set_shape():
+        # Convert input.height=224, ... to {"input.height": 244, }
+        shape_dict = {}
+        for e in shape.split(","):
+            k, v = e.split("=")
+            assert (
+                v is not None and v.isdigit()
+            ), f"shape dim ${v} is not valid from ${k} = ${v}."
+            shape_dict[k.strip()] = int(v)
 
-    model = onnx.load(onnx_file)
-    for tensor in model.graph.input:
-        update_dims(tensor)
-    # for tensor in model.graph.output:
-    #     update_dims(tensor)
+        def update_dim(tensor):
+            shape = tensor.type.tensor_type.shape
+            for e in shape.dim:
+                if e.dim_value > 0:
+                    continue
+                key = tensor.name + "." + e.dim_param
+                if key in shape_dict.keys():
+                    e.dim_value = shape_dict[key]
+                else:
+                    print(f"missing {key} shape")
 
-    onnx.checker.check_model(model)
-    onnx.save(model, output_filename)
-    print(f"Save new model to {output_filename}.")
+        for tensor in onnx_model.graph.input:
+            update_dim(tensor)
+
+        onnx.checker.check_model(onnx_model)
+
+    def is_dynamic():
+        for t in onnx_model.graph.input:
+            name, etype, dims, dynamic = value_info_parse(t)
+            if dynamic:
+                return True
+        return False
+
+    def model_build():
+        """
+        Create model.txt, model.so, model.json, model.params ...
+        """
+        print(f"Building {onnx_filename} on {device}...")
+        target = (
+            tvm.target.Target("cuda", host="llvm")
+            if device in ["cuda", "gpu"]
+            else tvm.target.Target("llvm", host="llvm")
+        )
+        mod, params = relay.frontend.from_onnx(onnx_model)
+        # mod = relay.transform.DynamicToStatic()(mod)
+        with tvm.transform.PassContext(opt_level=3):
+            graph, lib, params = relay.build_module.build(mod, target, params=params)
+
+        # Output model
+        with open(f"{output}/model.txt", "w") as fo:
+            fo.write(f"device: {device}\nmodel: {onnx_filename}\nshape: {shape}")
+        lib.export_library(f"{output}/model.so")
+        with open(f"{output}/model.json", "w") as fo:
+            fo.write(graph)
+        with open(f"{output}/model.params", "wb") as fo:
+            fo.write(relay.save_param_dict(params))
+
+    def model_package():
+        file_list = ["model.txt", "model.so", "model.json", "model.params"]
+        t = tarfile.open(tar_filename, "w:gz")
+        for file in file_list:
+            fullpath = f"{output}/{file}"
+            t.add(fullpath)
+        t.close()
+        print(f"{tar_filename} created.")
+
+    def check_modtxt():
+        s_device = ""
+        s_onnx_filename = ""
+        with open(f"{output}/model.txt", "r") as fo:
+            lines = fo.readlines()
+        for line in lines:
+            if line.startswith("device:"):
+                s_device = line.replace("device:", "", 1).strip()
+            if line.startswith("model:"):
+                s_onnx_filename = line.replace("model:", "", 1).strip()
+            if line.startswith("shape:"):
+                s_shape = line.replace("shape:", "", 1).strip()
+        assert s_device == device, "got error device."
+        assert s_shape == shape, "got error shape."
+        assert s_onnx_filename == onnx_filename, "got error file name."
+
+    def model_load():
+        check_modtxt()
+        target = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
+        # Load module
+        loaded_so = tvm.runtime.load_module(f"{output}/model.so")
+        loaded_json = open(f"{output}/model.json").read()
+        loaded_params = bytearray(open(f"{output}/model.params", "rb").read())
+        gmod = tvm.contrib.graph_executor.create(loaded_json, loaded_so, target)
+        gmod.load_params(loaded_params)
+        return gmod
+
+    def expect_output(input_data):
+        session_options = onnxruntime.SessionOptions()
+        # session_options.log_severity_level = 0
+
+        # Set graph optimization level
+        session_options.graph_optimization_level = (
+            onnxruntime.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
+        )
+        # onnxruntime support dynamic shape, loading onnx_filename is OK ...
+        ort_engine = onnxruntime.InferenceSession(onnx_filename, session_options)
+        outputs = ort_engine.run(None, input_data)
+        return outputs[0]
+
+    def model_output(gmod, input_data):
+        s_device = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
+        for k, v in input_data.items():
+            s_data = tvm.nd.array(v, s_device)
+            gmod.set_input(k, s_data)
+        gmod.run()
+        return gmod.get_output(0).numpy()
+
+    def model_verify(gmod):
+        # gmod input shape is same as onnx's ?
+        # gmod.get_num_inputs() -- 147
+        # gmod.get_input(0) -- <tvm.nd.NDArray shape=(1, 3, 244, 244), cpu(0)>
+
+        # gmod output result is same as onnx's ?
+        input_data = {}
+        shape = get_onnx_shape(onnx_model)
+        for k, v in shape.items():
+            input_data[k] = np.random.random_sample(size=v).astype("float32")
+        expect_value = expect_output(input_data)
+        model_value = model_output(gmod, input_data)
+        np.testing.assert_allclose(model_value, expect_value, rtol=1e-03, atol=1e-03)
+        print("Test model OK !")
+
+    def model_perf(gmod):
+        target = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
+        print(f"Test {tar_filename} on {device} ...")
+        ftimer = gmod.module.time_evaluator("run", target, number=1, repeat=5)
+        tvm_perf = np.array(ftimer().results) * 1000  # multiply 1000 for millisecond
+        print(
+            "    mean time %.2f ms, std %.2f ms" % (np.mean(tvm_perf), np.std(tvm_perf))
+        )
+
+    if len(shape) > 0:
+        set_shape()
+
+    if is_dynamic():
+        print("model is dynamic, could not be built. please reference:")
+        print(get_onnx_info(onnx_model))
+        return
+
+    model_build()
+    model_package()
+    gmod = model_load()
+    model_perf(gmod)
+
+    model_verify(gmod)
 
 
-def build_onnx(onnx_file, device, output):
-    if device.lower() in ["cuda", "gpu"]:
-        target = tvm.target.Target("cuda", host='llvm')
-    else:
-        target = tvm.target.Target("llvm", host='llvm')
-    device = tvm.device(str(target), 0)    
-
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     """TVM Onnx tools ..."""
 
-    parser = argparse.ArgumentParser(description="tvm tool for onnx model", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('input', type=str, help="input model file (eg: test.onnx or test.tar)")
-    parser.add_argument('-l', '--list', help="list onnx information", action='store_true')
-
-    parser.add_argument('-e', '--edit', help="edit dynamic onnx input shape", action='store_true')
-    static_group = parser.add_argument_group('edit options')
-    static_group.add_argument('-s', '--shape', type=str, default="input.height=224, input.width=224", help="set I/O shape")
-
-    parser.add_argument('-b', '--build', help="build onnx to tar model", action='store_true')
-    build_group = parser.add_argument_group('build options')
-    build_group.add_argument('-d', '--device', choices=['cpu', 'gpu'], default="cpu", help="build for device")
-
-    parser.add_argument('-v', '--verify', help="verify model (onnx/tar)", action='store_true')
-    parser.add_argument('-o', '--output', type=str, default="output", help="output folder")
+    parser = argparse.ArgumentParser(
+        description="build onnx model",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("input", type=str, help="input file")
+    parser.add_argument("-l", "--list", help="list onnx", action="store_true")
+    parser.add_argument("-b", "--build", help="build model", action="store_true")
+    build_group = parser.add_argument_group("build options")
+    build_group.add_argument(
+        "-d", "--device", choices=["cpu", "gpu"], default="cpu", help="target device"
+    )
+    build_group.add_argument(
+        "-s",
+        "--shape",
+        type=str,
+        default="",
+        help="set dynamic shape such as input.height=224,input.width=224",
+    )
+    build_group.add_argument(
+        "-o", "--output", type=str, default="output", help="output folder"
+    )
 
     args = parser.parse_args()
 
@@ -175,176 +301,14 @@ if __name__ == '__main__':
         print("model file {} not exist.".format(args.input))
         os._exit(0)
 
-    file_base, file_ext = file_name(args.input)
+    file_base, file_ext = file_name_parse(args.input)
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
     if args.list:
-        assert file_ext != 'onnx', f"view expect onnx model, but got {file_ext} model."
+        assert file_ext != "onnx", f"List onnx model, got {file_ext} model."
         onnx_list(args.input)
 
-    if args.edit:
-        assert file_ext != 'onnx', f"edit expect onnx model, but got {file_ext} model."
-        onnx_edit(args.input, args.output, args.shape)
-
     if args.build:
-        assert file_ext != 'onnx', f"build expect onnx model, but got {file_ext} model."
-        build_onnx(args.input, args.device, args.output)
-
-    if args.verify:
-        assert file_ext != 'tar', f"verify tvm model, but got {file_ext} model."
-        verify_model(agrs.input)
-
-
-
-
-
-    # # /************************************************************************************
-    # # ***
-    # # ***    MS: Define Global Names
-    # # ***
-    # # ************************************************************************************/
-    # if args.gpu:
-    #     target = tvm.target.Target("cuda", host='llvm')
-    # else:
-    #     target = tvm.target.Target("llvm", host='llvm')
-    # device = tvm.device(str(target), 0)        
-    # # input_shape = [1, 3, 512, 512]
-    # input_shape = (1, 3, tvm.relay.Any(), tvm.relay.Any())
-
-    # def tvm_export():
-    #     """Export onnx model."""
-
-    #     print("Building model on {} ...".format(target))
-
-    #     onnx_model = onnx.load(args.input)
-    #     if (args.gpu):
-    #         onnx_json_path = "{}/cuda_{}.json".format(args.output, os.path.basename(args.input))
-    #         onnx_so_path = "{}/cuda_{}.so".format(args.output, os.path.basename(args.input))
-    #         onnx_params_path = "{}/cuda_{}.params".format(args.output, os.path.basename(args.input))
-    #     else:
-    #         onnx_json_path = "{}/cpu_{}.json".format(args.output, os.path.basename(args.input))
-    #         onnx_so_path = "{}/cpu_{}.so".format(args.output, os.path.basename(args.input))
-    #         onnx_params_path = "{}/cpu_{}.params".format(args.output, os.path.basename(args.input))
-
-    #     # Parsing onnx model
-    #     mod, params = relay.frontend.from_onnx(onnx_model, {'input': input_shape}, freeze_params=False)
-    #     # mod, params = relay.frontend.from_onnx(onnx_model, freeze_params=False)
-    #     # mod = relay.transform.DynamicToStatic()(mod)
-    #     print(mod)
-
-    #     # Create TVM model
-    #     # with relay.build_config(opt_level=3):
-    #     #     graph, lib, params = relay.build_module.build(mod, target, params=params)
-
-    #     with tvm.transform.PassContext(opt_level=3):
-    #         graph, lib, params = relay.build_module.build(mod, target, params=params)
-
-
-    #     # https://discuss.tvm.apache.org/t/relay-frontend-can-relay-take-none-include-shape/5772/2
-    #     # executable = tvm.relay.backend.vm.compile(mod, target, params=params)
-
-    #     # xxxx8888
-    #     # opt_level = 3
-    #     # with tvm.transform.PassContext(opt_level=opt_level):
-    #     # executable = tvm.relay.backend.vm.compile(mod, target, params=params)
-    #     # code, lib = executable.save()
-    #     # Examples
-    #     # --------------------------------------------
-    #     #     import numpy as np
-    #     #     import tvm
-    #     #     from tvm import te
-    #     #     from tvm import relay
-    #     #     # define a simple network.
-    #     #     x = relay.var('x', shape=(10, 10))
-    #     #     f = relay.Function([x], x + x)
-    #     #     mod = tvm.IRModule({"main": f})
-    #     #     # create a Relay VM.
-    #     #     dev = tvm.cpu()
-    #     #     target = "llvm"
-    #     #     executable = relay.vm.compile(mod, target)
-    #     #     code, lib = executable.save()
-
-    #     #     # save and load the code and lib file.
-    #     #     tmp = tvm.contrib.utils.tempdir()
-    #     #     path_lib = tmp.relpath("lib.so")
-    #     #     lib.export_library(path_lib)
-
-    #     #     with open(tmp.relpath("code.ro"), "wb") as fo:
-    #     #         fo.write(code)
-
-    #     #     loaded_lib = tvm.runtime.load_module(path_lib)
-    #     #     loaded_code = bytearray(open(tmp.relpath("code.ro"), "rb").read())
-
-    #     #     # deserialize.
-    #     #     des_exec = tvm.runtime.vm.Executable.load_exec(loaded_code, loaded_lib)
-    #     #     # execute the deserialized executable.
-
-    #     #     x_data = np.random.rand(10, 10).astype('float32')
-    #     #     des_vm = tvm.runtime.vm.VirtualMachine(des_exec, dev)
-    #     #     res = des_vm.run(x_data)
-    #     #     print(res.numpy())
-
-
-
-
-    #     # Output TVM model
-    #     lib.export_library(onnx_so_path)
-    #     with open(onnx_json_path, 'w') as fo:
-    #         fo.write(graph)
-    #     with open(onnx_params_path, 'wb') as fo:
-    #         fo.write(relay.save_param_dict(params))
-
-
-    # def tvm_verify():
-    #     """Verify onnx model."""
-
-    #     print("Running model on {} ...".format(device))
-
-    #     if (args.gpu):
-    #         onnx_json_path = "{}/cuda_{}.json".format(args.output, os.path.basename(args.input))
-    #         onnx_so_path = "{}/cuda_{}.so".format(args.output, os.path.basename(args.input))
-    #         onnx_params_path = "{}/cuda_{}.params".format(args.output, os.path.basename(args.input))
-    #     else:
-    #         onnx_json_path = "{}/cpu_{}.json".format(args.output, os.path.basename(args.input))
-    #         onnx_so_path = "{}/cpu_{}.so".format(args.output, os.path.basename(args.input))
-    #         onnx_params_path = "{}/cpu_{}.params".format(args.output, os.path.basename(args.input))
-
-    #     # Load module
-    #     loaded_json = open(onnx_json_path).read()
-    #     loaded_solib = tvm.runtime.load_module(onnx_so_path)
-    #     loaded_params = bytearray(open(onnx_params_path, "rb").read())
-
-    #     module =  tvm.contrib.graph_executor.create(loaded_json, loaded_solib, device)
-    #     module.load_params(loaded_params)
-
-    #     # Predict
-    #     # /************************************************************************************
-    #     # ***
-    #     # ***    MS: Define Input Data
-    #     # ***
-    #     # ************************************************************************************/
-
-    #     # input_shape = [1, 3, 256, 256]
-    #     input = tvm.nd.array((np.random.uniform(size=input_shape).astype("float32")), device)
-
-    #     module.set_input("input", input)
-    #     module.run()
-    #     output = module.get_output(0)
-    #     print(output)
-
-
-    #     print("Evaluating ...")
-    #     ftimer = module.module.time_evaluator("run", device, number=1, repeat=5)
-    #     prof_res = np.array(ftimer().results) * 1000  # multiply 1000 for converting to millisecond
-    #     print(
-    #         "%-20s %-19s (%s)" % (onnx_so_path, "%.2f ms" % np.mean(prof_res), "%.2f ms" % np.std(prof_res))
-    #     )
-
-
-
-    # if args.export:
-    #     tvm_export()
-
-    # if args.verify:
-    #     tvm_verify()
+        assert file_ext != "onnx", f"Build onnx model, got {file_ext} model."
+        build_onnx(args.input, args.device, args.shape, args.output)
