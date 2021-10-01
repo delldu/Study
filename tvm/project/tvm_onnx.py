@@ -23,6 +23,18 @@ import tvm
 from tvm import relay
 
 
+def func_spend_time(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        func_return = func(*args, **kwargs)
+        end = time.time()
+        spend = int((end - start) * 1000)
+        print(f'{func.__name__} spend time: {spend} ms')
+        return func_return
+
+    return wrapper
+
+
 def value_info_parse(t):
     """parsing tensor value information"""
     # make_tensor_value_info(name,elem_type,shape,doc_string="",shape_denotation=None) --> ValueInfoProto
@@ -104,7 +116,7 @@ def get_onnx_shape(model):
 
 def onnx_list(onnx_filename):
     model = onnx.load(onnx_filename)
-    onnx.checker.check_model(onnx_model)
+    onnx.checker.check_model(model)
     s = get_onnx_info(model)
     print(s)
 
@@ -150,11 +162,12 @@ def build_onnx(onnx_filename, device, shape, output):
                 return True
         return False
 
+    @func_spend_time
     def model_build():
         """
         Create model.txt, model.so, model.json, model.params ...
         """
-        print(f"Building {onnx_filename} on {device}...")
+        print(f"Building {onnx_filename} on {device} ...")
         target = (
             tvm.target.Target("cuda", host="llvm")
             if device in ["cuda", "gpu"]
@@ -174,6 +187,7 @@ def build_onnx(onnx_filename, device, shape, output):
         with open(f"{output}/model.params", "wb") as fo:
             fo.write(relay.save_param_dict(params))
 
+    @func_spend_time
     def model_package():
         file_list = ["model.txt", "model.so", "model.json", "model.params"]
         t = tarfile.open(tar_filename, "w:gz")
@@ -183,7 +197,8 @@ def build_onnx(onnx_filename, device, shape, output):
         t.close()
         print(f"{tar_filename} created.")
 
-    def check_modtxt():
+    @func_spend_time
+    def check_modeltxt():
         s_device = ""
         s_onnx_filename = ""
         with open(f"{output}/model.txt", "r") as fo:
@@ -199,8 +214,11 @@ def build_onnx(onnx_filename, device, shape, output):
         assert s_shape == shape, "got error shape."
         assert s_onnx_filename == onnx_filename, "got error file name."
 
+
+    @func_spend_time
     def model_load():
-        check_modtxt()
+        check_modeltxt()
+
         target = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
         # Load module
         loaded_so = tvm.runtime.load_module(f"{output}/model.so")
@@ -208,9 +226,11 @@ def build_onnx(onnx_filename, device, shape, output):
         loaded_params = bytearray(open(f"{output}/model.params", "rb").read())
         gmod = tvm.contrib.graph_executor.create(loaded_json, loaded_so, target)
         gmod.load_params(loaded_params)
+
         return gmod
 
-    def expect_output(input_data):
+    @func_spend_time
+    def onnxruntime_infer(input_data):
         session_options = onnxruntime.SessionOptions()
         # session_options.log_severity_level = 0
 
@@ -221,16 +241,26 @@ def build_onnx(onnx_filename, device, shape, output):
         # onnxruntime support dynamic shape, loading onnx_filename is OK ...
         ort_engine = onnxruntime.InferenceSession(onnx_filename, session_options)
         outputs = ort_engine.run(None, input_data)
+
+        count = 10
+        spend = time.time()
+        for _ in range(count):
+            ort_engine.run(None, input_data)
+        spend = int((time.time() - spend) * 1000)
+        print(f"Onnxruntime infer mean spend {spend/count} ms (repeat {count} times).")
         return outputs[0]
 
-    def model_output(gmod, input_data):
+    @func_spend_time
+    def model_infer(gmod, input_data):
         s_device = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
         for k, v in input_data.items():
             s_data = tvm.nd.array(v, s_device)
             gmod.set_input(k, s_data)
         gmod.run()
+
         return gmod.get_output(0).numpy()
 
+    @func_spend_time
     def model_verify(gmod):
         # gmod input shape is same as onnx's ?
         # gmod.get_num_inputs() -- 147
@@ -241,26 +271,26 @@ def build_onnx(onnx_filename, device, shape, output):
         shape = get_onnx_shape(onnx_model)
         for k, v in shape.items():
             input_data[k] = np.random.random_sample(size=v).astype("float32")
-        expect_value = expect_output(input_data)
-        model_value = model_output(gmod, input_data)
+        expect_value = onnxruntime_infer(input_data)
+        model_value = model_infer(gmod, input_data)
         np.testing.assert_allclose(model_value, expect_value, rtol=1e-03, atol=1e-03)
         print("Test model OK !")
 
+    @func_spend_time
     def model_perf(gmod):
         target = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
-        print(f"Test {tar_filename} on {device} ...")
-        ftimer = gmod.module.time_evaluator("run", target, number=1, repeat=5)
+        ftimer = gmod.module.time_evaluator("run", target, number=10, repeat=3)
         # multiply 1000 for millisecond
         tvm_perf = np.array(ftimer().results) * 1000
         print(
-            "    mean time %.2f ms, std %.2f ms" % (np.mean(tvm_perf), np.std(tvm_perf))
+            f"Model infer on {device}: mean %.2f ms, std %.2f ms" % (np.mean(tvm_perf), np.std(tvm_perf))
         )
 
     if len(shape) > 0:
         set_shape()
 
     if is_dynamic():
-        print("model is dynamic, could not be built. please reference:")
+        print("model is dynamic, could not be built, please use shape option and also reference:")
         print(get_onnx_info(onnx_model))
         return
 
@@ -284,7 +314,7 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--build", help="build model", action="store_true")
     build_group = parser.add_argument_group("build options")
     build_group.add_argument(
-        "-d", "--device", choices=["cpu", "gpu"], default="cpu", help="target device"
+        "-d", "--device", choices=["cpu", "gpu", "cuda"], default="cpu", help="target device"
     )
     build_group.add_argument(
         "-s",
