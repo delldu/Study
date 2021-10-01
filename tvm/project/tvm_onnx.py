@@ -9,17 +9,18 @@
 # ************************************************************************************/
 #
 
-import numpy as np
 import argparse
-import pdb  # For debug
-import time
 import os
-import onnx
-import tvm
+import pdb  # For debug
 import tarfile
-from tvm import relay
+import time
 from string import Template
+
+import numpy as np
+import onnx
 import onnxruntime
+import tvm
+from tvm import relay
 
 
 def value_info_parse(t):
@@ -160,7 +161,7 @@ def build_onnx(onnx_filename, device, shape, output):
             else tvm.target.Target("llvm", host="llvm")
         )
         mod, params = relay.frontend.from_onnx(onnx_model)
-        # mod = relay.transform.DynamicToStatic()(mod)
+        mod = relay.transform.DynamicToStatic()(mod)
         with tvm.transform.PassContext(opt_level=3):
             graph, lib, params = relay.build_module.build(mod, target, params=params)
 
@@ -249,7 +250,8 @@ def build_onnx(onnx_filename, device, shape, output):
         target = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
         print(f"Test {tar_filename} on {device} ...")
         ftimer = gmod.module.time_evaluator("run", target, number=1, repeat=5)
-        tvm_perf = np.array(ftimer().results) * 1000  # multiply 1000 for millisecond
+        # multiply 1000 for millisecond
+        tvm_perf = np.array(ftimer().results) * 1000
         print(
             "    mean time %.2f ms, std %.2f ms" % (np.mean(tvm_perf), np.std(tvm_perf))
         )
