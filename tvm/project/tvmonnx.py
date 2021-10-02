@@ -13,7 +13,8 @@ import argparse
 import os
 import pdb  # For debug
 import tarfile
-import time
+from timeit import default_timer as timer
+import logging
 from string import Template
 
 import numpy as np
@@ -23,13 +24,17 @@ import tvm
 from tvm import relay
 
 
-def func_spend_time(func):
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s')
+
+def function_spend_time(func):
     def wrapper(*args, **kwargs):
-        start = time.time()
+        start = timer()
         func_return = func(*args, **kwargs)
-        end = time.time()
+        end = timer()
         spend = int((end - start) * 1000)
-        print(f'{func.__name__} spend time: {spend} ms')
+        logging.info(f"{func.__name__}() spend {spend} ms")
+
         return func_return
 
     return wrapper
@@ -128,9 +133,12 @@ def build_onnx(onnx_filename, device, shape, output):
     shape = shape.replace(" ", "").strip()  # remove blanks
     base, _ = file_name_parse(onnx_filename)
     tar_filename = f"{output}/{base}.tar"
+    new_onnx_filename = f"{output}/{base}.onnx"
 
     def set_shape():
-        # Convert input.height=224, ... to {"input.height": 244, }
+        """
+        input.height=224 ==> {"input.height": 244, }
+        """
         shape_dict = {}
         for e in shape.split(","):
             k, v = e.split("=")
@@ -154,6 +162,8 @@ def build_onnx(onnx_filename, device, shape, output):
             update_dim(tensor)
 
         onnx.checker.check_model(onnx_model)
+        onnx.save(onnx_model, new_onnx_filename)
+        onnx_filename = new_onnx_filename
 
     def is_dynamic():
         for t in onnx_model.graph.input:
@@ -162,7 +172,7 @@ def build_onnx(onnx_filename, device, shape, output):
                 return True
         return False
 
-    @func_spend_time
+    @function_spend_time
     def model_build():
         """
         Create model.txt, model.so, model.json, model.params ...
@@ -170,11 +180,11 @@ def build_onnx(onnx_filename, device, shape, output):
         print(f"Building {onnx_filename} on {device} ...")
         target = (
             tvm.target.Target("cuda", host="llvm")
-            if device in ["cuda", "gpu"]
+            if device in ["gpu"]
             else tvm.target.Target("llvm", host="llvm")
         )
         mod, params = relay.frontend.from_onnx(onnx_model)
-        mod = relay.transform.DynamicToStatic()(mod)
+        # mod = relay.transform.DynamicToStatic()(mod)
         with tvm.transform.PassContext(opt_level=3):
             graph, lib, params = relay.build_module.build(mod, target, params=params)
 
@@ -187,7 +197,7 @@ def build_onnx(onnx_filename, device, shape, output):
         with open(f"{output}/model.params", "wb") as fo:
             fo.write(relay.save_param_dict(params))
 
-    @func_spend_time
+    @function_spend_time
     def model_package():
         file_list = ["model.txt", "model.so", "model.json", "model.params"]
         t = tarfile.open(tar_filename, "w:gz")
@@ -197,7 +207,6 @@ def build_onnx(onnx_filename, device, shape, output):
         t.close()
         print(f"{tar_filename} created.")
 
-    @func_spend_time
     def check_modeltxt():
         s_device = ""
         s_onnx_filename = ""
@@ -214,12 +223,11 @@ def build_onnx(onnx_filename, device, shape, output):
         assert s_shape == shape, "got error shape."
         assert s_onnx_filename == onnx_filename, "got error file name."
 
-
-    @func_spend_time
+    @function_spend_time
     def model_load():
         check_modeltxt()
 
-        target = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
+        target = tvm.cuda() if device in ["gpu"] else tvm.cpu()
         # Load module
         loaded_so = tvm.runtime.load_module(f"{output}/model.so")
         loaded_json = open(f"{output}/model.json").read()
@@ -229,8 +237,11 @@ def build_onnx(onnx_filename, device, shape, output):
 
         return gmod
 
-    @func_spend_time
-    def onnxruntime_infer(input_data):
+    @function_spend_time
+    def onnxrt_infer(input_data):
+        """
+        onnxruntime infer
+        """
         session_options = onnxruntime.SessionOptions()
         # session_options.log_severity_level = 0
 
@@ -243,16 +254,16 @@ def build_onnx(onnx_filename, device, shape, output):
         outputs = ort_engine.run(None, input_data)
 
         count = 10
-        spend = time.time()
+        start = timer()
         for _ in range(count):
             ort_engine.run(None, input_data)
-        spend = int((time.time() - spend) * 1000)
-        print(f"Onnxruntime infer mean spend {spend/count} ms (repeat {count} times).")
+        spend = int((timer() - start) * 1000)
+        print(f"Onnxruntime infer mean spend {spend/count} ms.")
         return outputs[0]
 
-    @func_spend_time
+    @function_spend_time
     def model_infer(gmod, input_data):
-        s_device = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
+        s_device = tvm.cuda() if device in ["gpu"] else tvm.cpu()
         for k, v in input_data.items():
             s_data = tvm.nd.array(v, s_device)
             gmod.set_input(k, s_data)
@@ -260,7 +271,6 @@ def build_onnx(onnx_filename, device, shape, output):
 
         return gmod.get_output(0).numpy()
 
-    @func_spend_time
     def model_verify(gmod):
         # gmod input shape is same as onnx's ?
         # gmod.get_num_inputs() -- 147
@@ -271,26 +281,28 @@ def build_onnx(onnx_filename, device, shape, output):
         shape = get_onnx_shape(onnx_model)
         for k, v in shape.items():
             input_data[k] = np.random.random_sample(size=v).astype("float32")
-        expect_value = onnxruntime_infer(input_data)
+
+        expect_value = onnxrt_infer(input_data)
         model_value = model_infer(gmod, input_data)
         np.testing.assert_allclose(model_value, expect_value, rtol=1e-03, atol=1e-03)
         print("Test model OK !")
 
-    @func_spend_time
+    @function_spend_time
     def model_perf(gmod):
-        target = tvm.cuda() if device in ["cuda", "gpu"] else tvm.cpu()
+        target = tvm.cuda() if device in ["gpu"] else tvm.cpu()
         ftimer = gmod.module.time_evaluator("run", target, number=10, repeat=3)
         # multiply 1000 for millisecond
-        tvm_perf = np.array(ftimer().results) * 1000
+        perf = np.array(ftimer().results) * 1000
         print(
-            f"Model infer on {device}: mean %.2f ms, std %.2f ms" % (np.mean(tvm_perf), np.std(tvm_perf))
+            f"Model infer on {device}: mean spend %.2f ms, std %.2f ms"
+            % (np.mean(perf), np.std(perf))
         )
 
     if len(shape) > 0:
         set_shape()
 
     if is_dynamic():
-        print("model is dynamic, could not be built, please use shape option and also reference:")
+        print("Dynamic model could not be built, please use shape option, also reference:")
         print(get_onnx_info(onnx_model))
         return
 
@@ -298,12 +310,15 @@ def build_onnx(onnx_filename, device, shape, output):
     model_package()
     gmod = model_load()
     model_perf(gmod)
-
     model_verify(gmod)
 
 
 if __name__ == "__main__":
-    """TVM Onnx tools ..."""
+    """TVM Onnx tools ...
+        tvmonnx --list test.onnx
+        tvmonnx --shape <shape> test.onnx -o new_test.onnx
+        tvmonnx --run --inputs i.npz --print-time --number n --repeat n -outpus o.npz test.onnx
+    """
 
     parser = argparse.ArgumentParser(
         description="build onnx model",
@@ -312,35 +327,48 @@ if __name__ == "__main__":
     parser.add_argument("input", type=str, help="input file")
     parser.add_argument("-l", "--list", help="list onnx", action="store_true")
     parser.add_argument("-b", "--build", help="build model", action="store_true")
-    build_group = parser.add_argument_group("build options")
-    build_group.add_argument(
-        "-d", "--device", choices=["cpu", "gpu", "cuda"], default="cpu", help="target device"
+    build_g = parser.add_argument_group("build options")
+    build_g.add_argument(
+        "-d",
+        "--device",
+        choices=["cpu", "gpu"],
+        default="cpu",
+        help="target device",
     )
-    build_group.add_argument(
+    build_g.add_argument(
         "-s",
         "--shape",
         type=str,
         default="",
-        help="set dynamic shape such as input.height=224,input.width=224",
+        help="set dynamic shape, eg: input.height=224,input.width=224",
     )
-    build_group.add_argument(
+    build_g.add_argument(
         "-o", "--output", type=str, default="output", help="output folder"
     )
-
+    parser.add_argument(
+        "--number", metavar="N", type=int, default=1, help="repeat the run n times. Defaults to '1'"
+    )
+    parser.add_argument(
+        "--repeat", metavar="N", type=int, default=1, help="run the model n times. Defaults to '1'"
+    )
+    parser.add_argument(
+        "--print-time", action="store_true", help="record and print the execution time(s)"
+    )
+            
     args = parser.parse_args()
 
     if not os.path.exists(args.input):
-        print("model file {} not exist.".format(args.input))
+        print("file {} not exist.".format(args.input))
         os._exit(0)
 
-    file_base, file_ext = file_name_parse(args.input)
+    _, file_ext = file_name_parse(args.input)
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
     if args.list:
-        assert file_ext != "onnx", f"List onnx model, got {file_ext} model."
+        assert file_ext != "onnx", f"List onnx model, got {file_ext}."
         onnx_list(args.input)
 
     if args.build:
-        assert file_ext != "onnx", f"Build onnx model, got {file_ext} model."
+        assert file_ext != "onnx", f"Build onnx model, got {file_ext}."
         build_onnx(args.input, args.device, args.shape, args.output)
