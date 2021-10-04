@@ -15,6 +15,10 @@ import pdb  # For debug
 import numpy as np
 from PIL import Image
 
+def file_name_parse(filename):
+    """return file base, ext"""
+    return os.path.splitext(os.path.basename(filename))[0:2]
+
 def file_name_ext(filename):
     """return file ext"""
     return os.path.splitext(os.path.basename(filename))[1]
@@ -27,10 +31,14 @@ def is_image_file(filename):
         # for output case ...
         return file_name_ext(filename).lower() in ['.png', '.jpeg', '.jpg', '.bmp']
 
-def is_numpy_file(filename):
-    return file_name_ext(filename) == ".npz"
+def load_zip_file(afile):
+    try:
+        data = np.load(afile)
+        return data
+    except IOError as ex:
+        raise Exception("Error loading file: %s" % ex)
 
-def image_to_numpy(image_file, numpy_file, normalize=False):
+def image_to_numpy(image_file, normalize=False):
     assert os.path.exists(image_file), f"File {image_file} not exist."
 
     image = Image.open(image_file)
@@ -53,81 +61,97 @@ def image_to_numpy(image_file, numpy_file, normalize=False):
 
     # Add batch dimension
     numpy_data = np.expand_dims(normal_data, axis=0)
-    np.savez(numpy_file, data=numpy_data)
+    return numpy_data
 
-def numpy_to_image(numpy_file, image_file):
-    assert os.path.exists(numpy_file), f"File {numpy_file} not exist."
-    numpy_data = np.load(numpy_file)
-
-    for k, v in numpy_data.items():
-        image_data = numpy_data[k]
-        # image_data.shape -- (1, 3, 348, 348)
-        image_data = np.squeeze(image_data, axis=0)
-        image_data = np.transpose(image_data, (1, 2, 0))    # CxHxW --> HxWxC
+def numpy_to_image(numpy_data, image_file):
+    # numpy_data.shape -- (1, 3, 348, 348)
+    numpy_data = np.squeeze(numpy_data, axis=0)
+    if isinstance(numpy_data.shape, tuple) and len(numpy_data.shape) == 3 and numpy_data.shape[0] in [1, 3]:
+        image_data = np.transpose(numpy_data, (1, 2, 0))    # CxHxW --> HxWxC
         image_data = image_data * 255
         image = Image.fromarray(image_data.astype('uint8'))
         image.save(image_file)
-        break   # Save only first one ?
+        return True
+    return False
 
-def compare_files(numpy_file1, numpy_file2):
-    assert os.path.exists(numpy_file1), f"File {numpy_file1} not exist."
-    assert os.path.exists(numpy_file2), f"File {numpy_file2} not exist."
-    numpy_data1 = np.load(numpy_file1)
-    numpy_data2 = np.load(numpy_file2)
-    for k, v in numpy_data1.items():
-        image_data1 = numpy_data1[k]
-        image_data2 = numpy_data2[k]
-        np.testing.assert_allclose(image_data1, image_data2, rtol=1e-03, atol=1e-03)
+def compare_dict_data(dict1, dict2):
+    for k, v in dict1.items():
+        np.testing.assert_allclose(v, dict2[k], rtol=1e-03, atol=1e-03)
 
-    for k, v in numpy_data2.items():
-        image_data1 = numpy_data1[k]
-        image_data2 = numpy_data2[k]
-        np.testing.assert_allclose(image_data1, image_data2, rtol=1e-03, atol=1e-03)
+    for k, v in dict2.items():
+        np.testing.assert_allclose(dict1[k], v, rtol=1e-03, atol=1e-03)
 
-    print(f"File {numpy_file1} and {numpy_file2} almost equal.")
+def create_afile(afile, files, normalize):
+    zip_dict = {}
+    for file in files:
+        if not is_image_file(file):
+            print(f"File {file} is not image, skip.")
+            continue
+        base, ext = file_name_parse(file)
+        zip_dict[base] = image_to_numpy(file, normalize)
+    np.savez(afile, **zip_dict)
+
+
+def list_afile(afile):
+    zip_dict = load_zip_file(afile)
+    for k, v in zip_dict.items():
+        print(k, "=", v.shape)
+
+def extract_afile(afile, directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    zip_dict = load_zip_file(afile)
+    for k, v in zip_dict.items():
+        image_file = f"{directory}/{k}.png"
+        if not numpy_to_image(v, image_file):
+            print(f"Could not convert {k} to image, skip ...")
+
+def compare_afiles(afile, files):
+    std_dict = load_zip_file(afile)
+
+    for file in files:
+        print(f"Start checking {file} ...")
+        cmp_dict = load_zip_file(file)
+        compare_dict_data(std_dict, cmp_dict)
+    print("OK, almost equal.")
 
 if __name__ == "__main__":
     """
     tvmd -- co-worker of tvmc
     """
+    tvmd_description = "tvmd compress image files with npz format, like 'tar'"
+    tvmd_examples = '''
+    Examples:
+        tvmd -c file.npz a.png b.png
+        tvmd -t file.npz
+        tvmd -x file.npz -C output
+        tvmd -d file1.npz file2.npz
+    '''
+
     parser = argparse.ArgumentParser(
-        description="tvmd help tvmc to process image data",
+        description=tvmd_description,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("-i", "--input", type=str, default="", help="input file")
-    parser.add_argument("-n", "--normal", help="normal with imagenet mean/std", action="store_true")
-    parser.add_argument("-o", "--output", type=str, default="", help="output file")
-    parser.add_argument("-c", "--compare", type=str, default="", help="compare file with input")
+    parser.add_argument("FILES", type=str, nargs='*', help="image files")
+    parser.add_argument("-c", "--create", type=str, help="create a new archive")
+    parser.add_argument("-n", "--normal", help="imagenet normal for create option", action="store_true")
+    parser.add_argument("-t", "--list", type=str, help="list the contents of an archive")
+    parser.add_argument("-x", "--extract", type=str, help="extract files from an archive")
+    parser.add_argument("-C", "--directory", metavar="DIR", type=str, default="output", help="change to directory DIR")
+    parser.add_argument("-d", "--diff", type=str, help="find differences between archive files")
+
     args = parser.parse_args()
 
-    def show_help_exit(message):
-        print("*" * 80)
-        print("*")
-        print("* Warning: " + message + ", please kindly reference help")
-        print("*")
-        print("*" * 80)
-        parser.print_help()        
-        os._exit(-1)
-
-    if len(args.input) + len(args.output) + len(args.compare) == 0:
-        show_help_exit("Missing input, output or compare option")
-
-    if not os.path.exists(args.input):
-        show_help_exit(f"File {args.input} not exist.")
-
-    if len(args.output) + len(args.compare) == 0:
-        show_help_exit("Missing output or compare option")
-
-    if len(args.output) > 0:
-        if is_image_file(args.input) and is_numpy_file(args.output):
-            image_to_numpy(args.input, args.output, args.normal)
-        elif is_numpy_file(args.input) and is_image_file(args.output):
-            numpy_to_image(args.input, args.output)
-        else:
-            show_help_exit("Only support image->npz or npz->image")
-
-    if len(args.compare) > 0:
-        if is_numpy_file(args.input) and is_numpy_file(args.compare):
-            compare_files(args.input, args.compare)
-        else:
-            show_help_exit("Input and compare file should be npz")
+    if args.create:
+        create_afile(args.create, args.FILES, args.normal)
+    elif args.list:
+        list_afile(args.list)
+    elif args.extract:
+        extract_afile(args.extract, args.directory)
+    elif args.diff:
+        compare_afiles(args.diff, args.FILES)
+    else:
+        parser.print_help()
+        print()
+        print(tvmd_examples.strip().replace(" "*8, " "*4))
