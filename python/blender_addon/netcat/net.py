@@ -14,14 +14,7 @@
 import queue
 import json
 import socketserver
-import select
 # import pdb
-import logging
-
-
-
-logging.basicConfig(level=logging.NOTSET)
-netcat_logger = logging.getLogger('netcat')
 
 # dns = bpy.app.driver_namespace
 dns = {}
@@ -181,134 +174,10 @@ def load_recv_message(topic):
         return ""
 
 
-
-
-# class NetcatServer:
-#     """
-#     Simple netcat server
-#     """
-
-#     def __init__(self, port=9090):
-#         server_address = ("localhost", port)
-
-#         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#         self.server.bind(server_address)
-#         self.server.listen(200)
-
-#         self.input_set = [self.server]
-#         self.output_set = []
-#         self.except_set = []
-#         self.message_buffer = {}
-
-#         netcat_logger.info(f"Netcat server listen on {server_address} ... ")
-
-#     def on_accept(self):
-#         clientsock, clientaddr = self.server.accept()
-#         netcat_logger.debug(f"{clientaddr} coming ... ")
-
-#         clientsock.setblocking(0)
-#         self.input_set.append(clientsock)
-#         self.message_buffer[clientsock] = ""
-
-#     def on_receive(self, s):
-#         data = s.recv(1024)
-#         netcat_logger.debug("{s} received message: {data}")
-
-#         if data and data != "":
-#             # s is readable, so connecting on ...
-#             self.message_buffer[s] += data.decode(encoding="utf-8")
-#             if s not in self.output_set:
-#                 self.output_set.append(s)
-#         else:
-#             # client disconnect ...
-#             natcat_logger.debug(f"{s.getpeername()} disconnected...")
-#             if s in self.output_set:
-#                 self.output_set.remove(s)
-#             self.input_set.remove(s)
-#             del self.message_buffer[s]
-#             s.close()
-
-#     def on_send(self, s):
-#         # client request something ? if yes, give message to send
-#         if len(self.message_buffer[s]) == 0:
-#             return
-
-#         d = decode_message(self.message_buffer[s])
-#         if d is None:
-#             # send back bad request message
-#             response_message = encode_badrequest_message(
-#                 self.message_buffer[s].replace('"', "").replace("'", "")
-#             )
-#             s.send(response_message.encode(encoding="utf-8"))
-#         else:
-#             # save message to netcat_recv_queue ?
-#             if d["method"] == "pub":
-#                 save_recv_message(d["topic"], d["context"])
-#                 # sendback public OK
-#                 d["status"] = StatusCode_OK
-#                 s.send(json.dumps(d).encode(encoding="utf-8"))
-#             else:
-#                 # got clinet sub message, we should find message from queue and send back
-#                 response_message = load_send_message(d["topic"])
-#                 if len(response_message) == 0:
-#                     d["context"] = "Not Found"
-#                     d["status"] = StatusCode_NotFound
-#                 else:
-#                     d["context"] = response_message
-#                     d["status"] = StatusCode_OK
-#                 d["length"] = len(d["context"])
-#                 s.send(json.dumps(d).encode(encoding="utf-8"))
-
-#         self.message_buffer[s] = ""
-
-#     def on_close(self, s):
-#         netcat_logger.debug(f"{s.getpeername()} disconnected.")
-
-#         if s in self.input_set:
-#             self.input_set.remove(s)
-#         if s in self.output_set:
-#             self.output_set.remove(s)
-#         if s in self.except_set:
-#             self.except_set.remove(s)
-#         s.close()
-#         del self.message_buffer[s]
-
-#     def for_loop(self):
-#         while True:
-#             input_ready, output_ready, except_ready = select.select(
-#                 self.input_set, self.output_set, self.except_set
-#             )
-#             for s in input_ready:
-#                 if s == self.server:
-#                     # new clinet coming ...
-#                     self.on_accept()
-#                 else:
-#                     # old client, read and save message
-#                     self.on_receive(s)
-
-#             for s in output_ready:
-#                 self.on_send(s)
-
-#             for s in except_ready:
-#                 # nothing to do except 'close socket' ...
-#                 self.on_close(s)
-
-#         # close all sockets, notice self.server include self.input_set
-#         for s in self.input_set:
-#             self.on_close(s)
-#         for s in self.output_set:
-#             self.on_close(s)
-#         for s in self.except_set:
-#             self.on_close(s)
-#         del self.message_buffer
-
-
 class NetcatTCPHandler(socketserver.StreamRequestHandler):
     '''
         Netcat handler
     '''
-
     def handle_message(self, data):
         # Here data is bytes, so we convert it to string at first
         message = data.strip().decode(encoding="utf-8")
@@ -342,14 +211,15 @@ class NetcatTCPHandler(socketserver.StreamRequestHandler):
                 self.data = self.rfile.readline()
                 if self.data and len(self.data) > 0:
                     # self.data is 'bytes' class, include '\n'
-                    netcat_logger.debug(f"{self.client_address[0]} wrote: {self.data}")
                     self.handle_message(self.data)
-
                 else:
                     break
             except Exception as e:
-                print(f"{self.client_address} disconnected.")
+                # print(f"{self.client_address} disconnected.")
                 break
+
+class NetcatServer(socketserver.ThreadingTCPServer):
+    allow_reuse_address = True
 
 
 if __name__ == "__main__":
@@ -365,16 +235,7 @@ if __name__ == "__main__":
     '''
 
     # Create the server, binding to localhost on port 9999
-
-    # s = NetcatServer(9999)
-    # s.for_loop()
-
-    # server = SocketServer.ThreadingTCPServer(addr,Servers,bind_and_activate = False)
-
-
     HOST, PORT = "localhost", 9999
-    server = socketserver.ThreadingTCPServer((HOST, PORT), NetcatTCPHandler, bind_and_activate = False)
-    server.allow_reuse_address = True
-    server.server_bind()
-    server.server_activate()
+    server = NetcatServer((HOST, PORT), NetcatTCPHandler)
     server.serve_forever()
+    server.shutdown()
