@@ -15,6 +15,7 @@ import json
 import socket
 import select
 from enum import Enum
+import pdb
 
 # dns = bpy.app.driver_namespace
 dns = {}
@@ -29,11 +30,10 @@ dns = {}
 #     "status": 200
 # }
 
-class StatusCode(Enum):
-    OK = 200
-    BadRequest = 400
-    NotFound = 404
-    ServerError = 500
+StatusCode_OK = 200
+StatusCode_BadRequest = 400
+StatusCode_NotFound = 404
+StatusCode_ServerInternalError = 500
 
 def decode_message(message):
     '''Decode JSON string to dict object'''
@@ -63,7 +63,7 @@ def encode_progress_message(topic, percent):
     d['topic'] = topic
     d['context'] = f'progress:{percent}'
     d['length'] = len(d['context'])
-    d['status'] = StatusCode.OK
+    d['status'] = StatusCode_OK
     return json.dumps(d)
 
 def progress_message_percent(message):
@@ -78,7 +78,8 @@ def encode_badrequest_message(message):
     d['topic'] = 'BadRequest'
     d['context'] = message
     d['length'] = len(message)
-    d['status'] = StatusCode.BadRequest
+    d['status'] = StatusCode_BadRequest
+
     return json.dumps(d)
 
 def empty_message(topic):
@@ -96,7 +97,7 @@ def get_queue_helper(send_or_recv, topic):
     '''
     root_node = f"netcat_{send_or_recv}_queue"
 
-    if root not in dns :
+    if root_node not in dns :
         dns[root_node] = {topic : queue.Queue()}
     elif topic not in dns[root_node]:
         dns[root_node][topic] = queue.Queue()
@@ -127,23 +128,24 @@ def save_send_message(topic, message):
     # no save empty message
     if topic is None or message is None or len(message) == 0:
         return
-
     q = get_send_queue(topic)
     try:
         q.put(message, timeout=1)
     except:
         pass
+    pdb.set_trace()
 
 def save_recv_message(topic, message):
     # no save empty message
     if topic is None or message is None or len(message) == 0:
         return
-
     q = get_recv_queue(topic)
     try:
         q.put(message, timeout=1)
     except:
         pass
+    pdb.set_trace()
+
 
 def load_send_message(topic):
     q = get_send_queue(topic)
@@ -168,7 +170,7 @@ class NetcatServer:
         Simple netcat server
     '''
     def __init__(self, port=9090):
-		server_address = ('localhost', port)
+        server_address = ('localhost', port)
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -184,7 +186,7 @@ class NetcatServer:
 
     def on_accept(self):
         clientsock, clientaddr = self.server.accept()
-        print(s.getpeername(), " coming here...")
+        print(f"{clientaddr} coming here ... socket = {clientsock}")
 
         clientsock.setblocking(0)
         self.input_set.append(clientsock)
@@ -195,13 +197,13 @@ class NetcatServer:
         print("Received message: ", data)
 
         if data and data != '':
-            # client connecting ...
-            self.message_buffer += data
+            # s is readable, so connecting on ...
+            self.message_buffer[s] += data.decode(encoding='utf-8') 
             if s not in self.output_set:
                 self.output_set.append(s)
         else:
             # client disconnect ...
-	        print(s.getpeername(), "disconnected...")
+            print(s.getpeername(), "disconnected...")
             if s in self.output_set:
                 self.output_set.remove(s)
             self.input_set.remove(s)
@@ -209,41 +211,44 @@ class NetcatServer:
             s.close()
 
     def on_send(self, s):
-          # client request something ? if yes, give message
-          d = decode_message(self.message_buffer)
-          if d is None:
-              #send back bad request message
-              response_message = encode_badrequest_message(self.message_buffer[s].replace('\"', '').replace('\'', ''))
-              s.sendall(response_message)
-          else:
-              # save message to netcat_recv_queue ?
-              if d['method'] == 'pub':
-                  save_recv_message(d['topic'], d['context'])
-                  # sendback public OK
-                  d['status'] = StatusCode.OK
-                  s.sendall(json.dumps(d))
-              else:
-                  # got clinet sub message, we should find message from queue and send back
-                  response_message = load_send_message(d['topic'])
-                  if len(response_message) == 0:
-                      d['status'] = StatusCode.NotFound
-                  else:
-                      d['context'] = response_message
-                      d['status'] = StatusCode.OK
-                  s.sendall(json.dumps(d))
+        # client request something ? if yes, give message to send
+        if len(self.message_buffer[s]) == 0:
+        	return
 
-          self.message_buffer[s] = ''
+        d = decode_message(self.message_buffer[s])
+        if d is None:
+            #send back bad request message
+            response_message = encode_badrequest_message(self.message_buffer[s].replace('\"', '').replace('\'', ''))
+            s.send(response_message.encode(encoding='utf-8'))
+        else:
+            # save message to netcat_recv_queue ?
+            if d['method'] == 'pub':
+                save_recv_message(d['topic'], d['context'])
+                # sendback public OK
+                d['status'] = StatusCode_OK
+                s.send(json.dumps(d).encode(encoding='utf-8'))
+            else:
+                # got clinet sub message, we should find message from queue and send back
+                response_message = load_send_message(d['topic'])
+                if len(response_message) == 0:
+                    d['status'] = StatusCode_NotFound
+                else:
+                    d['context'] = response_message
+                    d['status'] = StatusCode_OK
+                s.send(json.dumps(d).encode(encoding='utf-8'))
+
+        self.message_buffer[s] = ''
 
     def on_close(self, s):
         print(s.getpeername(), "disconnected")
-          if s in self.input_set:
-              self.input_set.remove(s)
-          if s in self.output_set:
-              self.output_set.remove(s)
-          if s in self.except_set:
-              self.except_set.remove(s)
-          s.close()
-          del self.message_buffer[s]
+        if s in self.input_set:
+            self.input_set.remove(s)
+        if s in self.output_set:
+            self.output_set.remove(s)
+        if s in self.except_set:
+            self.except_set.remove(s)
+        s.close()
+        del self.message_buffer[s]
 
 
     def for_loop(self):
@@ -260,8 +265,8 @@ class NetcatServer:
             for s in output_ready:
                 self.on_send(s)
 
-            for s in except_set:
-                # have nothing to do except close socket ...
+            for s in except_ready:
+                # nothing to do except 'close socket' ...
                 self.on_close(s)
 
         # close all sockets, notice self.server include self.input_set
