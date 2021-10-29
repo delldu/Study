@@ -33,6 +33,14 @@ StatusCode_BadRequest = 400
 StatusCode_NotFound = 404
 StatusCode_ServerInternalError = 500
 
+# class SetQueue(Queue.Queue):
+#     def _init(self, maxsize):
+#         self.queue = set()
+#     def _put(self, item):
+#         self.queue.add(item)
+#     def _get(self):
+#         return self.queue.pop()
+
 
 def decode_message(message):
     """Decode JSON string to dict object"""
@@ -210,11 +218,11 @@ class NetcatTCPHandler(socketserver.StreamRequestHandler):
             try:
                 self.data = self.rfile.readline()
                 if self.data and len(self.data) > 0:
-                    # self.data is 'bytes' class, include '\n'
+                    # self.data is bytes including '\n'
                     self.handle_message(self.data)
                 else:
                     break
-            except Exception as e:
+            except ConnectionResetError as e:
                 # print(f"{self.client_address} disconnected.")
                 break
 
