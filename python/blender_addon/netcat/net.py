@@ -216,9 +216,11 @@ class NetcatTCPHandler(socketserver.StreamRequestHandler):
     def handle(self):
         while True:
             try:
+                print("please start service here ? ...")
+
                 self.data = self.rfile.readline()
                 if self.data and len(self.data) > 0:
-                    # self.data is bytes including '\n'
+                    # self.data is bytes, should be at least including '\n'
                     self.handle_message(self.data)
                 else:
                     break
