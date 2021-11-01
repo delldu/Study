@@ -9,18 +9,18 @@
 
 help()
 {
-	echo "pack  Package ai power files"
-	echo "list  List ai power package"
+	echo "pack  Package netcat files"
+	echo "list  List netcat package"
 }
 
 pack()
 {
-	zip ai_power.zip ai_power/*.py
+	zip netcat.zip netcat/*.py
 }
 
 list()
 {
-	unzip -v ai_power.zip
+	unzip -v netcat.zip
 }
 
 if [ "$*" == "" ] ;

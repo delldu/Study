@@ -9,17 +9,18 @@
 
 help()
 {
-	echo "Help ..."
+	echo "pack  Package ai power files"
+	echo "list  List ai power package"
 }
 
-test1()
+pack()
 {
-	echo "Test1 ... $1 $2 $3"
+	zip ai_power.zip ai_power/*.py
 }
 
-test2()
+list()
 {
-	echo "Test2 ... $1 $2 $3"
+	unzip -v ai_power.zip
 }
 
 if [ "$*" == "" ] ;

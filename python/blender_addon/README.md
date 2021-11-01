@@ -1,11 +1,5 @@
 ## 1. Install
 ```pip install pynng
-https://blender.stackexchange.com/questions/8509/including-3rd-party-modules-in-a-blender-addon
-
-
-https://github.com/yushulx/snap-package
-
-
 pip install pynng
 
 # Install pynng to blender 2.93 ?
@@ -29,31 +23,115 @@ drwxr-xr-x 2 dell dell 4.0K 10月 19 16:28 __pycache__
 pkgutil
 list(pkgutil.iter_modules())
 
-
-https://github.com/yushulx/snap-package
-
-
-xenogenesi/blender_movieclip_dlib_landmarks.py
-https://blender.stackexchange.com/questions/221110/fastest-way-copying-from-bgl-buffer-to-numpy-array
-https://stackoverflow.com/questions/58790877/blender-api-rendering-a-frame-to-memory
-
-
-####
-https://docs.blender.org/api/current/bpy.app.handlers.html#basic-handler-example
-
-###
-https://blender.stackexchange.com/questions/80195/how-to-get-the-truly-width-and-height-of-frame-when-rendering-it-would-be-good
 ```
 ## 2. Server
 ```
+import socket
+import sys
+import bpy
 
+HOST = '127.0.0.1'
+PORT = 65432
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, PORT))
+
+# listen() marks the socket referred to by sockfd as a passive socket (awaits for an in­coming connection,
+# which will spawn a new active socket once a connection is established), that is, as a socket that
+# will be used to accept incoming connection requests using accept(2).
+s.listen()
+
+# Extracts the first connection request on the queue of pending connections for the listening socket,
+# sockfd, creates a new connected socket, and returns a new file descriptor referring to that socket.
+# The newly created socket is not in the listening state. The original socket sockfd is unaffected by
+# this call.
+conn, addr = s.accept()
+conn.settimeout(2.0)
+
+def handle_data():
+    interval = 2.0
+    #print('Connected by: ', addr)
+    data = None
+
+    # In non-blocking mode blocking operations error out with OS specific errors.
+    # https://docs.python.org/3/library/socket.html#notes-on-socket-timeouts
+    try:
+        data = conn.recv(1024)
+    except:
+        pass
+
+    if not data:
+        pass
+    else:
+        conn.sendall(data)
+       
+        # Fetch the 'Sockets' collection or create one. Anything created via sockets will be linked
+        # to that collection.
+        collection = None
+        try:
+            collection = bpy.data.collections["Sockets"]
+        except:
+            collection = bpy.data.collections.new("Sockets")
+            bpy.context.scene.collection.children.link(collection)
+
+        if "cube" in data.decode("utf-8"):
+            mesh_data = bpy.data.meshes.new(name='m_cube')
+            obj = bpy.data.objects.new('cube', mesh_data)
+            collection.objects.link(obj)
+
+        if "empty" in data.decode("utf-8"):
+            empty = bpy.data.objects.new("empty", None)
+            empty.empty_display_size = 2
+            empty.empty_display_type = 'PLAIN_AXES'
+            collection.objects.link(empty)
+
+
+        if "quit" in data.decode("utf-8"):
+            conn.close()
+            s.close()
+
+    return interval
+
+bpy.app.timers.register(handle_data)
 ```
 ## 3. Client
 ```
+https://github.com/Botmasher/blender-vse-customizations/blob/master/vse/maskomatic.py
+https://github.com/lukas-blecher/AutoMask
+https://github.com/kbsezginel/blenditioner/blob/master/blenditioner.py
+https://github.com/yushulx/snap-package
+https://blender.stackexchange.com/questions/221110/fastest-way-copying-from-bgl-buffer-to-numpy-array
 
+
+Application Handlers (bpy.app.handlers)
+https://docs.blender.org/api/current/bpy.app.handlers.html#basic-handler-example
+
+Including 3rd party modules in a Blender addon
+https://blender.stackexchange.com/questions/8509/including-3rd-party-modules-in-a-blender-addon
+
+xenogenesi/blender_movieclip_dlib_landmarks.py
+https://gist.github.com/xenogenesi/fc4ec4ecebec4861db87ff633dea6347
+
+https://docs.blender.org/api/current/bpy.app.timers.html
+https://www.programcreek.com/python/example/127720/bpy.app
+
+bpy.ops.wm.read_factory_settings()
+https://github.com/lunadigital/blender-addon-template/blob/master/ui.py
+https://gitee.com/kaiv2/blender-addons-contrib/blob/master/space_clip_editor_autotracker.py
+https://www.cnblogs.com/yaoyu126/p/9310857.html
+
+
+bpy.context.scene['mydataparams'] = {'value':1}
+
+dns = bpy.app.driver_namespace
+dns["netcat_send_queue"] = queue.Queue()
+dns["netcat_recv_queue"] = queue.Queue()
+print(dns.get("netcat_send_queue"))
+ 
 ```
 
 ## 4. Reference Patchs
+### General
 ```
 user_preferences = bpy.context.preferences.addons['blenderkit'].preferences
 api_key = user_preferences.api_key
@@ -234,5 +312,233 @@ p = bpy.context.scene.sequence_editor.sequences[1]
 # v.type -- 'MOVIE'
 # p.type -- 'IMAGE'
 
+bpy.context.scene.node_tree.nodes
+
+mask = bpy.data.masks['Mask']
+spline = mask.layers['MaskLayer'].splines[0]
+for p in spline.points:
+    p.handle_left_type = 'FREE'
+    p.handle_right_type = 'FREE'
+    p.co[0] -= 0.1
+    p.co[1] -= 0.1
+
 ```
+
+### MCE
+```
+list_for(bpy.data.movieclips) -- [bpy.data.movieclips['tennis.mp4']]
+clip = bpy.data.movieclips[0]
+clip.filepath -- '/home/dell/tennis.mp4'
+clip.source -- 'MOVIE'
+clip.frame_start, clip.frame_duration, clip.frame_offset -- (1, 70, 0)
+
+bpy.context.scene -- bpy.data.scenes['Scene']
+bpy.data.scenes['Scene'].frame_current -- 40
+bpy.context.scene.frame_start, bpy.context.scene.frame_end -- (1, 70)
+bpy.context.scene.frame_current -- 41
+
+mask = bpy.data.masks[0]
+list_for(mask.layers) -- [bpy.data.masks['Mask'].layers["MaskLayer"]]
+
+layer = mask.layers[0]
+layer = mask.layers.active -- bpy.data.masks['Mask'].layers["MaskLayer"]
+list_mem(layer) -- ['alpha', 'bl_rna', 'blend', 'falloff', 'hide', 'hide_render', 'hide_select', 'invert', 'name', 'rna_type', 'select', 'splines', 'use_fill_holes', 'use_fill_overlap']
+
+def hide_layer(layer, hide=True):
+    layer.hide = hide
+    layer.hide_render = hide
+    layer.hide_select = hide
+    layer.keyframe_insert('hide')
+    layer.keyframe_insert('hide_render')
+    layer.keyframe_insert('hide_select')
+```
+
+### VSE
+
+```
+def doc_idname(s): return ".".join(map(str.lower, s.split("_OT_")))
+doc_idname('POWER_SEQUENCER_OT_space_sequences') -- 'power_sequencer.space_sequences'
+
+bpy.context.scene.sequence_editor_create()
+bpy.context.area.type = 'SEQUENCE_EDITOR'
+
+s=bpy.context.scene.sequence_editor.sequences.new_movie("tennis.mp4", "/home/dell/tennis.mp4", channel=1, frame_start=1, fit_method='ORIGINAL')
+
+s=bpy.context.scene.sequence_editor.sequences.new_movie("color.mp4", "", channel=3, frame_start=1)
+s.frame_final_duration = 70
+s.blend_alpha = 0.5
+
+bpy.context.scene.sequence_editor.sequences.new_image(...)
+bpy.context.scene.sequence_editor.sequences.new_effect()
+
+import bpy
+def get_sequencer_area():
+    sequencer_area = None
+    for window in bpy.context.window_manager.windows:
+        for area in window.screen.areas:
+            if not area.type == "SEQUENCE_EDITOR":
+                continue
+            sequencer_area = {
+            "window": window,
+            "screen": window.screen,
+            "area": area,
+            "scene": bpy.context.scene,
+            }
+    return sequencer_area
+
+bpy.context.scene.sequence_editor_create()
+bpy.context.area.type = 'SEQUENCE_EDITOR'
+bpy.ops.sequencer.movie_strip_add(
+    get_sequencer_area(),
+    filepath="/home/dell/tennis.mp4",
+    frame_start=1,
+    sound=1,
+    use_framerate=1)
+
+bpy.context.window_manager.progress_begin(0, 100)
+bpy.context.window_manager.progress_update(50)
+bpy.context.window_manager.progress_end()
+
+bpy.context.selected_sequences
+bpy.context.scene.sequence_editor.sequences.new_effect(name="bug", type="TEXT", channel=1, frame_start=1, frame_end=70)
+```
+
+### Render
+
+```
+bpy.context.scene.render -- bpy.data.scenes['Scene'].render
+bpy.data.scenes['Scene'].render.resolution_x
+bpy.data.scenes['Scene'].render.resolution_percentage -- 100
+```
+
+
+
+### Grease Pencel
+
+```
+bpy.data.grease_pencils[0] -- bpy.data.grease_pencils['Annotations']
+bpy.data.grease_pencils[1] -- bpy.data.grease_pencils['Annotations.001']
+pen = bpy.data.grease_pencils[0]
+pen.layers[0].frames -- bpy.data.grease_pencils['Annotations'].layers["Note"].frames
+s = pen.layers[0].frames[0].strokes
+for p in s.data.strokes[0].points:
+	print(p.co.x, p.co.y, p.co.z)
+```
+
+
+
+### Keyframe
+
+```
+bpy.app.debug_wm = True
+
+def refresh_ui_keyframes():
+    try:
+        for area in bpy.context.screen.areas:
+            if area.type in ('TIMELINE', 'GRAPH_EDITOR', 'DOPESHEET_EDITOR'):
+                area.tag_redraw()
+    except:
+        pass
+
+track = bpy.data.movieclips['tennis.mp4'].tracking.tracks["Track.001"]
+markers = bpy.data.movieclips['tennis.mp4'].tracking.tracks["Track.001"].markers
+```
+
+```
+import bpy
+from mathutils import (
+    Vector,
+)
+
+def MarkerSize():
+    clip = bpy.data.movieclips['tennis.mp4']
+    track = clip.tracking.tracks[0]
+    marker = track.markers[0]
+    pattern = Vector(marker.pattern_bound_box[1]) - Vector(marker.pattern_bound_box[0])
+
+    clip_width = clip.size[0]
+    clip_height = clip.size[1]
+
+	row = height - int(marker.co[1] * clip_height)
+    col = int(marker.co[0] * clip_width)
+    height = int(pattern[1] * clip_height)
+    width = int(pattern[0] * clip_width)
+
+	print("file path:", clip.filepath)
+	print("current frame:", bpy.context.scene.frame_current)
+    print(f"Marker: center_row = {row}, center_col = {col}, half_height = {height}, half_width = {width}")
+   
+MarkerSize()
+
+```
+
+```
+import bpy
+
+def MaskSize():
+    clip = bpy.data.movieclips['tennis.mp4']
+    
+    clip_width = clip.size[0]
+    clip_height = clip.size[1]
+
+    visiable_points = []
+    for mask in bpy.data.masks:
+        if not mask.use_fake_user:
+            continue
+        for layer in mask.layers:
+            for s in layer.splines:
+                for p in s.points:
+                    visiable_points.append(p)
+
+    print("------------------")
+    for p in visiable_points:    
+        print("x = ", p.co[0], "y = ", p.co[1])
+
+    print("===================")
+    min_x = min_y = 1.0
+    max_x = max_y = -1.0
+    for p in visiable_points:
+        min_x = min(min_x, p.co[0])
+        max_x = max(max_x, p.co[0])
+        min_y = min(min_y, 1.0 - p.co[1])
+        max_y = max(max_y, 1.0 - p.co[1])
+
+    min_x = int(min_x * clip_width)
+    max_x = int(max_x * clip_width)
+    min_y = int(min_y * clip_height)
+    max_y = int(max_y * clip_height)
+    
+    print("file path:", clip.filepath)
+    print("clip: h x w = ", clip_height, "x", clip_width)
+    
+    print("current frame:", bpy.context.scene.frame_current)
+    print(f"Mask: min_x = {min_x}, min_y = {min_y}, max_x = {max_x}, max_y = {max_y}")
+   
+MaskSize()
+```
+
+### Socket
+
+```
+_presets = os.path.join(bpy.utils.user_resource('SCRIPTS'), "presets")
+BLENDERKIT_LOCAL = "http://localhost:8001"
+BLENDERKIT_MAIN = "https://www.blenderkit.com"
+BLENDERKIT_DEVEL = "https://devel.blenderkit.com"
+BLENDERKIT_API = "/api/v1/"
+BLENDERKIT_REPORT_URL = "usage_report/"
+BLENDERKIT_USER_ASSETS = "/my-assets"
+BLENDERKIT_PLANS = "/plans/pricing/"
+BLENDERKIT_MANUAL = "https://youtu.be/pSay3yaBWV0"
+BLENDERKIT_MODEL_UPLOAD_INSTRUCTIONS_URL = "https://www.blenderkit.com/docs/upload/"
+BLENDERKIT_MATERIAL_UPLOAD_INSTRUCTIONS_URL = "https://www.blenderkit.com/docs/uploading-material/"
+BLENDERKIT_BRUSH_UPLOAD_INSTRUCTIONS_URL = "https://www.blenderkit.com/docs/uploading-brush/"
+BLENDERKIT_HDR_UPLOAD_INSTRUCTIONS_URL = "https://www.blenderkit.com/docs/uploading-hdr/"
+BLENDERKIT_SCENE_UPLOAD_INSTRUCTIONS_URL = "https://www.blenderkit.com/docs/uploading-scene/"
+BLENDERKIT_LOGIN_URL = "https://www.blenderkit.com/accounts/login"
+BLENDERKIT_OAUTH_LANDING_URL = "/oauth-landing/"
+BLENDERKIT_SIGNUP_URL = "https://www.blenderkit.com/accounts/register"
+BLENDERKIT_SETTINGS_FILENAME = os.path.join(_presets, "bkit.json")
+
+```
+
 
