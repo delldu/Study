@@ -55,7 +55,7 @@ from bpy.props import (
 
 # [i.frame for i in bpy.context.scene.timeline_markers]
 
-def act_strip(context):
+def active_strip():
     try:
         return bpy.context.scene.sequence_editor.active_strip
     except AttributeError:
@@ -65,7 +65,7 @@ class AIVideoOperator(Operator):
     """ Abstract Class for Video Operator"""
     @classmethod
     def poll(cls, context):
-        strip = act_strip(context)
+        strip = active_strip()
         if not strip:
             return False
         return strip.type != 'SOUND'
@@ -376,9 +376,21 @@ classes = (
 
 ai_video_register, ai_video_unregister = register_classes_factory(classes)
 
+def test_so():
+    import os
+    from ctypes import cdll, c_float
+
+    so_dir = os.path.dirname(os.path.realpath(__file__))
+    so_lib = cdll.LoadLibrary(f"{so_dir}/libadd.so")
+    fadd = so_lib.add
+    fadd.argtypes =[c_float, c_float] 
+    fadd.restype = c_float
+    print("1.0 + 2.0 == ", fadd(1.0, 2.0))
 
 def register():
     print("Hello, AI Power")
+    test_so()
+
     ai_video_register()
 
     register_class(AIVideoMenu)

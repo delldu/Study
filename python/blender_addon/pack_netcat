@@ -1,0 +1,32 @@
+#/************************************************************************************#***
+#***	Copyright Dell 2021, All Rights Reserved.
+#***
+#***	File Author: Dell, 2021年 10月 24日 星期日 14:16:47 CST
+#***
+#************************************************************************************/
+#
+#! /bin/sh
+
+help()
+{
+	echo "pack  Package ai power files"
+	echo "list  List ai power package"
+}
+
+pack()
+{
+	zip ai_power.zip ai_power/*.py
+}
+
+list()
+{
+	unzip -v ai_power.zip
+}
+
+if [ "$*" == "" ] ;
+then
+	help
+else
+	eval "$*"
+fi
+
