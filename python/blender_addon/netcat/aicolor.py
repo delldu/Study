@@ -15,83 +15,128 @@ import time
 import json
 import hashlib
 
+import queue
 import socketserver
-from collections import UserDict
 import threading
-import multiprocessing as mp
-# from multiprocessing import Queue
-# from multiprocessing import Process
+import multiprocessing
 
 import pdb
 
 
-class ColorTasks(UserDict):
+def task_id(value):
     """
-    id, input, refimg, create_time, progress, update_time
+    e80b5017098950fc58aad83c8c14978e
+    """
+    return hashlib.md5(value.encode(encoding="utf-8")).hexdigest()
+
+
+class NCTasks(object):
+    """
+        id, content, create_time, progress, update_time, pid
     """
 
+    def __init__(self):
+        self.taskd = {}
+        self.taskq = queue.Queue()
+
+    def __getitem__(self, key):
+        return self.taskd[key]
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, str) or len(key) == 0:
+            raise RuntimeError(f"Key must be string which length > 0")
+        # repeat key not allowed in queue
+        if key not in self.taskd:
+            self.taskq.put(key)
+        self.data[key] = value
+
+    def __delitem__(self, key):
+        if key in self.taskd:
+            try:
+                v = self.taskd[key]
+                pid = v['pid']
+                if isinstance(pid, int) and pid > 1:
+                    os.kill(pid, signal.SIGKILL)
+            except:
+                pass
+
+        # delete key from taskq
+        bak = []
+        while not self.taskq.empty():
+            bak.append(self.taskq.get())
+        try:
+            bak.remove(key)
+            del self.taskd[key]
+        except:
+            pass
+        for e in bak:
+            self.taskq.put(e)
+
     def __repr__(self):
-        '''Format Color Tasks'''
-        outfmt = "{:32} {:16} {:16} {:20} {:16} {:20}"
+        """Format Color Tasks"""
+        outfmt = "{:32} {:40} {:16} {:12} {:16} {:7}"
         output = []
         output.append(
             outfmt.format(
                 "task id",
-                "input file",
-                "ref image",
+                "content",
                 "create time",
                 "progress",
                 "update time",
+                "pid"
             )
         )
-        output.append("-" * 124)
-        for k, v in self.data.items():
-            i = v["input"]
-            r = v["refimg"]
+        output.append(
+            outfmt.format(
+                "-" * 32,
+                "-" * 40,
+                "-" * 16,
+                "-" * 12,
+                "-" * 16,
+                "-" * 7
+            )
+        )
+        # output.append("-" * 128)
+        for k, v in self.taskd.items():
+            i = v["content"]
             # c = time.ctime(v['create_time'])
-            c = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(v["create_time"]))
+            # c = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(v["create_time"]))
+            c = time.strftime("%H:%M:%S", time.localtime(v["create_time"]))
             p = v["progress"]
-            # u = time.ctime(v['update_time'])
-            u = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(v["update_time"]))
-            output.append(outfmt.format(k, i, r, c, f"{p:6.2f} %", u))
-        return ("\n".join(output))
+            u = time.strftime("%H:%M:%S", time.localtime(v["update_time"]))
+            pid = v["pid"]
+            output.append(outfmt.format(k, i, c, f"{p:6.2f} %", u, pid))
+        return "\n".join(output)
 
+    def update_progress(self, id, progress, pid):
+        d = self.taskd.get(id, None)
+        if d is not None:
+            d["progress"] = max(0, min(progress, 100))
+            d["update_time"] = time.time()
+            d["pid"] = pid
+            self.taskd[id] = d
 
-    @classmethod
-    def task_id(cls, input_filename, refimg_filename):
-        """
-        e80b5017098950fc58aad83c8c14978e
-        """
-        s = input_filename + ":" + refimg_filename
-        return hashlib.md5(s.encode(encoding="utf-8")).hexdigest()
+    def queue_get(self):
+        '''get task id from queue.'''
+        return self.taskq.get()
 
-    def create_task(self, input_filename, refimg_filename):
-        def new_task(input_filename, refimg_filename):
-            """time.ctime(time.time())"""
+    def queue_put(self, value):
+        def new_task():
             return {
-                "input": input_filename,
-                "refimg": refimg_filename,
+                "content": value,
                 "progress": 0,
                 "create_time": time.time(),
                 "update_time": time.time(),
-            }
+                "pid": 0
+            }        
+        key = task_id(value)
+        if key not in self.taskd:
+            self.taskq.put(key)
+        self.taskd[key] = new_task()
 
-        id = self.task_id(input_filename, refimg_filename)
-        '''Update'''
-        self.data[id] = new_task(input_filename, refimg_filename)
+    def queue_size(self):
+        return self.taskq.qsize()
 
-    def update_progress(self, id, progress):
-        d = self.data.get(id, None)
-        if d is not None:
-            d["progress"] = min(int(progress), 100)
-            d["update_time"] = time.time()
-            self.data[id] = d
-
-    def availabe_taskid(self):
-        for k, v in self.data.items():
-            if int(v['progress']) == 0:
-                return k
-        return ""
 
 class ColorTCPHandler(socketserver.StreamRequestHandler):
     """
@@ -102,6 +147,8 @@ class ColorTCPHandler(socketserver.StreamRequestHandler):
         # Here data is bytes, so we convert it to string at first
         message = data.strip().decode(encoding="utf-8")
         # echo back
+        message = str(self.server.active_tasks)
+
         self.wfile.write(message.encode(encoding="utf-8"))
 
         # d = decode_message(message)
@@ -114,7 +161,7 @@ class ColorTCPHandler(socketserver.StreamRequestHandler):
         # else:
         #     # save message to netcat_recv_queue ?
         #     if d["method"] == "pub":
-        #         save_recv_message(d["topic"], d["context"])
+        #         save_recv_message(d["topic"], d["content"])
         #         # sendback public OK
         #         d["status"] = StatusCode_OK
         #         self.wfile.write(json.dumps(d).encode(encoding="utf-8"))
@@ -122,12 +169,12 @@ class ColorTCPHandler(socketserver.StreamRequestHandler):
         #         # got clinet sub message, we should find message from queue and send back
         #         response_message = load_send_message(d["topic"])
         #         if len(response_message) == 0:
-        #             d["context"] = "Not Found"
+        #             d["content"] = "Not Found"
         #             d["status"] = StatusCode_NotFound
         #         else:
-        #             d["context"] = response_message
+        #             d["content"] = response_message
         #             d["status"] = StatusCode_OK
-        #         d["length"] = len(d["context"])
+        #         d["length"] = len(d["content"])
         #         self.wfile.write(json.dumps(d).encode(encoding="utf-8"))
 
     def handle(self):
@@ -144,145 +191,106 @@ class ColorTCPHandler(socketserver.StreamRequestHandler):
                 break
 
 
-class ColorServer(socketserver.ThreadingTCPServer):
+class NCServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
 
     # Custom our members ...
-    active_tasks = ColorTasks()
-    active_children = set()
-    max_children = 2
-    progress_queue = mp.Queue()
+    active_tasks = NCTasks()
 
+    def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True, max_children=2):
+        super().__init__(server_address, RequestHandlerClass, bind_and_activate)
+        self.maximum_children = max_children
+        self.active_children = set()
+        self.maximum_children = max_children
+        self.progress_queue = multiprocessing.Queue()
 
     def update_progress(self):
         while not self.progress_queue.empty():
             m = self.progress_queue.get()
-            self.active_tasks.update_progress(m['id'], m['progress'] + 1)
-            # m.done_task()
-        # print("Updated progress from message queue ...............")
-        print(self.active_tasks)
+            self.active_tasks.update_progress(m["id"], m["progress"], m["pid"])
 
-    def collect_children(self):
-        # if len(self.active_children) < 1:
-        #     return
-        while len(self.active_children) >= self.max_children:
-            try:
-                pid, _ = os.waitpid(-1, os.WNOHANG)
-                if (pid < 1):
-                    break
+    def clean_children(self):
+        ''' Clean zombie process'''
+        try:
+            pid, _ = os.waitpid(-1, os.WNOHANG)
+            if pid > 1:
                 self.active_children.discard(pid)
-                # print("CheckPoing 1-3 ...", self.active_children)
-            except ChildProcessError:
-                # have not any children, we're done
-                self.active_children.clear()
-            except OSError:
-                break
+        except ChildProcessError:
+            # have not any children, we're done
+            self.active_children.clear()
+        except OSError:
+            pass
 
-        # print("CheckPoing 2 ...", self.active_children)
-
-        # # Checking all defunct children ...
-        # for pid in self.active_children.copy():
-        #     try:
-        #         pid, _ = os.waitpid(pid, os.WNOHANG)
-        #         # if the child hasn't exited yet, pid will be 0 and ignored
-        #         self.active_children.discard(pid)
-        #     except ChildProcessError:
-        #         # someone else reaped it
-        #         self.active_children.discard(pid)
-        #     except OSError:
-        #         pass
-
-        # print("CheckPoint 3 ...", self.active_children)
-
-
-    def handle_service(self, q, id, input_filename, refimg_filename):
-        '''For real service, should be overridden '''
+    def handle_service(self, q, content):
+        """For real service, should be overridden"""
+        id = task_id(content)
+        pid = os.getpid()
         for i in range(100):
-            time.sleep(0.1)
-            m = {'id' : id, 'progress': i + 1}
+            time.sleep(0.5)
+            m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
 
-    def tasks_forever(self):
+    def work_forever(self):
         while True:
-            # idle or too busy ?
-            id = self.active_tasks.availabe_taskid()
-            if len(id) == 0 or len(self.active_children) >= self.max_children:
+            # idle or busy ?
+            if (
+                self.active_tasks.queue_size() == 0
+                or len(self.active_children) >= self.maximum_children
+            ):
                 self.update_progress()
-                self.collect_children()
-                # time.sleep(0.5)
+                self.clean_children()
                 continue
-            # there are tasks and also resource, we need for process to do task ...
-            self.active_tasks.update_progress(id, 1)
-            
-            # print("Will start task ... ==> id = ", id)
-            # print(self.active_tasks)
-            running_task = self.active_tasks[id]
-            pargs = (self.progress_queue, id, running_task['input'], running_task['refimg'])
-            p = mp.Process(target = self.handle_service, args=pargs)
-            # p.daemon = True
+            # Now there are tasks and running resource, create process to do job ...
+            id = self.active_tasks.queue_get()
+            t = self.active_tasks[id]
+            pargs = (self.progress_queue, t["content"])
+            p = multiprocessing.Process(target=self.handle_service, args=pargs)
+            p.daemon = True
             p.start()
             self.active_children.add(p.pid)
 
+    def serve_forever(self):
+        t = threading.Thread(target=self.work_forever, args=())
+        t.daemon = True
+        t.start()
+        return super().serve_forever()
+
+
 def start_server(HOST="localhost", PORT=9999):
-    server = ColorServer((HOST, PORT), ColorTCPHandler)
+    server = NCServer((HOST, PORT), ColorTCPHandler)
 
-    server.active_tasks.create_task("input1.mp4", "color1.png")
-    server.active_tasks.create_task("input2.mp4", "color2.png")
-    server.active_tasks.create_task("input3.mp4", "color3.png")
-    server.active_tasks.create_task("input4.mp4", "color4.png")
-
-    t = threading.Thread(target=server.tasks_forever, args=())
-    t.start()
-    # time.sleep(1)
+    server.active_tasks.queue_put("color(input1.mp4,color1.png)")
+    server.active_tasks.queue_put("cloor(input2.mp4,color2.png)")
+    server.active_tasks.queue_put("color(input3.mp4,color3.png)")
+    server.active_tasks.queue_put("color(input4.mp4,color4.png)")
 
     server.serve_forever()
     server.shutdown()
 
 
-def client_connect(address, port, input_filename, refimg_filename, output_filename):
+def client_connect(address, port, content, output_filename):
     print(f"Connect to {address}:{port} ...")
-    print(f"Coloring {input_filename} with {refimg_filename} to {output_filename} ...")
-
-
-def color(q, input_filename, refimg_file, output_filename):
-    count = 1
-    while count < 100:
-        print(
-            f"Coloring {input_filename} with {refimg_file} to {output_filename} ... {count}"
-        )
-        count += 1
-        q.put(count)
-        time.sleep(1)
-
-
-def test():
-    q = Queue()
-    i, r, o = "input.mp4", "refimg_file.png", "output.mp4"
-    colorp = Process(target=color, args=(q, i, r, o))
-
-    colorp.start()
-    progress = 0
-
-    while progress < 100:
-        if not q.empty():
-            progress = q.get()
-            print("Color progress ... ", progress)
-
-        time.sleep(0.5)
+    print(f"Coloring {content} to {output_filename} ...")
 
 
 if __name__ == "__main__":
     """Ai Color."""
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.add_argument("-s", "--server", help="Run Server", action="store_true")
     parser.add_argument("-c", "--client", help="Run Client", action="store_true")
-    parser.add_argument("-a", "--address", type=str, default="localhost", help="server address")
+    parser.add_argument(
+        "-a", "--address", type=str, default="localhost", help="server address"
+    )
     parser.add_argument("-p", "--port", type=int, default=9999, help="service port")
 
     parser.add_argument("--input", type=str, default="input.mp4", help="input file")
-    parser.add_argument("--refimg", type=str, default="reference.png", help="reference image")
-    parser.add_argument("--output", type=str, default="output.mp4", help="output file")
+    parser.add_argument(
+        "--refimg", type=str, default="reference.png", help="reference image"
+    )
+    parser.add_argument("--output", type=str, default="output", help="output folder")
     args = parser.parse_args()
     print(args)
 
@@ -291,13 +299,11 @@ if __name__ == "__main__":
     # else:
     #     client_connect(args.address, args.port, args.input, args.refimg, args.output)
 
-    # tasks = ColorTasks()
+    tasks = NCTasks()
+    tasks.queue_put("color(input1.mp4,color1.png)")
+    tasks.queue_put("color(input1.mp4,color1.png)")
+    tasks.queue_put("color(input1.mp4,color1.png)")
+    tasks.queue_put("color(input1.mp4,color1.png)")
+    print(tasks)
 
-    # print(tasks)
-
-    # print(tasks)
-
-    # pdb.set_trace()
-
-
-
+    pdb.set_trace()
