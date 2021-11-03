@@ -1,4 +1,4 @@
-"""NC"""
+"""NC Server, Client SDK"""
 # coding=utf-8
 #
 # /************************************************************************************
@@ -17,10 +17,8 @@ import os
 import time
 import json
 import hashlib
-import argparse
-
+import signal
 import socket
-
 import queue
 import socketserver
 import threading
@@ -35,10 +33,31 @@ def nc_id(value):
     """
     return hashlib.md5(value.encode(encoding="utf-8")).hexdigest()
 
+def function_parse(s):
+    '''
+    example:
+        f_name, f_args = function_parse("clean(infile=xxxx, outfile=yyyy)")
+        # f_name, f_args -- clean', {'infile': 'xxxx', 'outfile': 'yyyy'}
+    ''' 
+    import re
+    f_name = ""
+    f_args = {}
+    pattern = r'(\w[\w\d_]*)\((.*)\)$'
+    match = re.match(pattern, s)
+    if match:
+        f_name = match.group(1)
+        args = [e.strip() for e in match.group(2).split(",")]
+        for e in args:
+            kv = e.split("=")
+            if len(kv) == 2:
+                f_args[kv[0].strip()] = kv[1].strip()
+            else:
+                f_args[kv[0].strip()] = ""
+    return f_name, f_args
 
 class NCTasks(object):
     """
-    id, content, create_time, progress, update_time, pid
+    id, content, created, progress, updated, pid
     """
 
     def __init__(self):
@@ -47,24 +66,24 @@ class NCTasks(object):
 
     def __repr__(self):
         """Format Color Tasks"""
-        outfmt = "{:32} {:40} {:16} {:12} {:16} {:7}"
+        outfmt = "{:32} {:84} {:8} {:8} {:8} {:8}"
         output = []
         output.append(
             outfmt.format(
-                "task id", "content", "create time", "progress", "update time", "pid"
+                "task id", "content", "create", "progress", "update", "pid"
             )
         )
         output.append(
-            outfmt.format("-" * 32, "-" * 40, "-" * 16, "-" * 12, "-" * 16, "-" * 7)
+            outfmt.format("-" * 32, "-" * 84, "-" * 8, "-" * 8, "-" * 8, "-" * 8)
         )
         # output.append("-" * 128)
         for k, v in self.taskd.items():
             i = v["content"]
-            # c = time.ctime(v['create_time'])
-            # c = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(v["create_time"]))
-            c = time.strftime("%H:%M:%S", time.localtime(v["create_time"]))
+            # c = time.ctime(v['created'])
+            # c = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(v["created"]))
+            c = time.strftime("%H:%M:%S", time.localtime(v["created"]))
             p = v["progress"]
-            u = time.strftime("%H:%M:%S", time.localtime(v["update_time"]))
+            u = time.strftime("%H:%M:%S", time.localtime(v["updated"]))
             pid = v["pid"]
             output.append(outfmt.format(k, i, c, f"{p:6.2f} %", u, pid))
         return "\n".join(output)
@@ -76,7 +95,7 @@ class NCTasks(object):
         d = self.taskd.get(id, None)
         if d is not None:
             d["progress"] = max(0, min(progress, 100))
-            d["update_time"] = time.time()
+            d["updated"] = time.time()
             d["pid"] = pid
             self.taskd[id] = d
 
@@ -89,8 +108,8 @@ class NCTasks(object):
             return {
                 "content": value,
                 "progress": 0,
-                "create_time": time.time(),
-                "update_time": time.time(),
+                "created": time.time(),
+                "updated": time.time(),
                 "pid": 0,
             }
 
@@ -259,39 +278,36 @@ class NCHandler(socketserver.StreamRequestHandler):
         except ConnectionResetError as e:
             """Write error or client disconnected ..."""
             pass
+        # read nothing, so close client connection ...
+        self.finish()
         return False
 
     def handle(self):
+        '''current client read loop ...'''
         while self.handle_request():
             pass
 
-
 class NCServer(socketserver.ThreadingTCPServer):
+    # allow_reuse_address come from ThreadingTCPServer
     allow_reuse_address = True
-
-    # Custom our members ...
 
     def __init__(
         self,
         server_address,
-        RequestHandlerClass,
-        bind_and_activate=True,
         max_children=2,
     ):
-        super().__init__(server_address, RequestHandlerClass, bind_and_activate)
-        self.maximum_children = max_children
+        super().__init__(server_address, NCHandler)
+        self.max_children = max_children
         self.active_children = set()
-        self.maximum_children = max_children
+        self.max_children = max_children
         self.progress_queue = multiprocessing.Queue()
         self.tasks = NCTasks()
 
-    def update_progress(self):
-        while not self.progress_queue.empty():
-            m = self.progress_queue.get()
-            self.tasks.update_progress(m["id"], m["progress"], m["pid"])
+        signal.signal(signal.SIGCHLD, self.clean_battlefield)
 
-    def clean_children(self):
-        """Clean zombie process"""
+    def clean_battlefield(self, signum, frame):
+        '''signam, frame is for signal.signal(), no meaning here '''
+        # Clean zombie process
         try:
             pid, _ = os.waitpid(-1, os.WNOHANG)
             if pid > 1:
@@ -302,61 +318,57 @@ class NCServer(socketserver.ThreadingTCPServer):
         except OSError:
             pass
 
+        # clear progress queue
+        while not self.progress_queue.empty():
+            m = self.progress_queue.get()
+            self.tasks.update_progress(m["id"], m["progress"], m["pid"])
+
     def handle_service(self, q, content):
         """For real service, should be overridden"""
         id = nc_id(content)
         pid = os.getpid()
         for i in range(100):
-            time.sleep(0.5)
+            time.sleep(0.1)
             m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
 
-    def work_forever(self):
+    def working_forever(self):
         while True:
             # idle or busy ?
             if (
                 self.tasks.queue_size() == 0
-                or len(self.active_children) >= self.maximum_children
+                or len(self.active_children) >= self.max_children
             ):
-                self.update_progress()
-                self.clean_children()
+                self.clean_battlefield(0, 0)
                 continue
-            # Now there are tasks and running resource, create process to do job ...
+            # there are tasks and also running resource, create process ...
             id = self.tasks.queue_get()
             t = self.tasks.get(id)
             pargs = (self.progress_queue, t["content"])
-            p = multiprocessing.Process(target=self.handle_service, args=pargs)
-            p.daemon = True
+            p = multiprocessing.Process(target=self.handle_service, args=pargs, daemon=True)
             p.start()
             self.active_children.add(p.pid)
 
     def serve_forever(self):
-        t = threading.Thread(target=self.work_forever, args=())
-        t.daemon = True
-        t.start()
+        threading.Thread(target=self.working_forever, args=(), daemon=True).start()
         return super().serve_forever()
 
 
-def start_server(HOST="localhost", PORT=9999):
-    s = NCServer((HOST, PORT), NCHandler)
-    s.tasks.queue_put("color(input1.mp4,color1.png)")
-    s.tasks.queue_put("cloor(input2.mp4,color2.png)")
-    s.tasks.queue_put("color(input3.mp4,color3.png)")
-    s.tasks.queue_put("color(input4.mp4,color4.png)")
-    s.serve_forever()
-    server.shutdown()
-
-
-class NC(object):
+class NCClient(object):
     def __init__(self, host, port):
         self.host = host
         self.port = port
+        self.alive = True
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.socket.connect((host, port))
             self.socket.settimeout(2)
         except (OSError, socket.gaierror) as err:
+            self.alive = False
             print(f"Connecting {host}:{port} error {str(err)}")
+    
+    def is_alive(self):
+        return self.alive
 
     def rpc(self, message):
         """Request and Response Model"""
@@ -372,7 +384,7 @@ class NC(object):
                 else:
                     break
         except Exception as err:
-            print(f"NC RPC error: {err}")
+            print(f"NCClient RPC error: {err}")
         return NCMessage.decode_response(received_data)
 
     def get(self, id):
@@ -388,34 +400,5 @@ class NC(object):
         return self.rpc(NCMessage.encode_request("TRACE", message))
 
     def close(self):
+        self.alive = False
         self.socket.close()
-
-
-def client_connect(host, port):
-    nc = NC(host, port)
-    ret = nc.hello("xxxx")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    parser.add_argument("-s", "--server", help="Run Server", action="store_true")
-    parser.add_argument("-c", "--client", help="Run Client", action="store_true")
-    parser.add_argument(
-        "-a", "--address", type=str, default="localhost", help="server address"
-    )
-    parser.add_argument("-p", "--port", type=int, default=9999, help="service port")
-
-    # parser.add_argument("--input", type=str, default="input.mp4", help="input file")
-    # parser.add_argument(
-    #     "--refimg", type=str, default="reference.png", help="reference image"
-    # )
-    # parser.add_argument("--output", type=str, default="output", help="output folder")
-    args = parser.parse_args()
-    print(args)
-
-    if args.server:
-        start_server(args.address, args.port)
-    else:
-        client_connect(args.address, args.port)
