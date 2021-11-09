@@ -15,17 +15,22 @@ import time
 
 from nc import nc_id, function_parse, NCClient, NCServer
 
+
 class VideoClient(NCClient):
-    '''Video client SDK'''
+    """Video client SDK"""
 
     def clean(self, infile, noise_level, outfile):
-        f_message = f"clean(infile={infile}, noise_level={noise_level}, outfile={outfile})"
+        f_message = (
+            f"clean(infile={infile}, noise_level={noise_level}, outfile={outfile})"
+        )
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
     def color(self, infile, color_picture, outfile):
-        f_message = f"color(infile={infile}, color_picture={color_picture}, outfile={outfile})"
+        f_message = (
+            f"color(infile={infile}, color_picture={color_picture}, outfile={outfile})"
+        )
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
@@ -73,13 +78,17 @@ class VideoClient(NCClient):
         return self.put(f_message)
 
     def face(self, infile, face_picture, outfile):
-        f_message = f"face(infile={infile}, face_picture={face_picture}, outfile={outfile})"
+        f_message = (
+            f"face(infile={infile}, face_picture={face_picture}, outfile={outfile})"
+        )
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
     def body(self, infile, body_picture, outfile):
-        f_message = f"body(infile={infile}, body_picture={body_picture}, outfile={outfile})"
+        f_message = (
+            f"body(infile={infile}, body_picture={body_picture}, outfile={outfile})"
+        )
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
@@ -95,6 +104,7 @@ class VideoServer(NCServer):
             m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
 
+
 class VideoCleanServer(VideoServer):
     def handle_service(self, q, f_content):
         """For real service, should be overridden"""
@@ -105,6 +115,7 @@ class VideoCleanServer(VideoServer):
             m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
 
+
 class VideoColorServer(VideoServer):
     def handle_service(self, q, f_content):
         """For real service, should be overridden"""
@@ -114,6 +125,7 @@ class VideoColorServer(VideoServer):
             time.sleep(0.1)
             m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
+
 
 class VideoLightServer(VideoServer):
     def handle_service(self, q, f_content):
@@ -136,6 +148,7 @@ class VideoStableServer(VideoServer):
             m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
 
+
 class VideoSMaskServer(VideoServer):
     def handle_service(self, q, f_content):
         """For real service, should be overridden"""
@@ -157,6 +170,7 @@ class VideoPMaskServer(VideoServer):
             m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
 
+
 class VideoPatchServer(VideoServer):
     def handle_service(self, q, f_content):
         """For real service, should be overridden"""
@@ -166,6 +180,7 @@ class VideoPatchServer(VideoServer):
             time.sleep(0.1)
             m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
+
 
 class VideoZoomxServer(VideoServer):
     def handle_service(self, q, f_content):
@@ -187,6 +202,7 @@ class VideoSlowxServer(VideoServer):
             time.sleep(0.1)
             m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
+
 
 class VideoFaceServer(VideoServer):
     def handle_service(self, q, f_content):
@@ -210,13 +226,11 @@ class VideoPoseServer(VideoServer):
             q.put(m)
 
 
-
 def start_server(HOST="localhost", PORT=9999):
     s = NCServer((HOST, PORT))
     s.max_children = 3
     s.serve_forever()
     server.shutdown()
-
 
 
 def client_connect(host, port):
@@ -243,6 +257,7 @@ def client_connect(host, port):
 
     nc.close()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -259,4 +274,3 @@ if __name__ == "__main__":
         start_server(args.address, args.port)
     else:
         client_connect(args.address, args.port)
-

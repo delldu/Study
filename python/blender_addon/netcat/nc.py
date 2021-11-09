@@ -33,16 +33,18 @@ def nc_id(value):
     """
     return hashlib.md5(value.encode(encoding="utf-8")).hexdigest()
 
+
 def function_parse(s):
-    '''
+    """
     example:
         f_name, f_args = function_parse("clean(infile=xxxx, outfile=yyyy)")
         # f_name, f_args -- clean', {'infile': 'xxxx', 'outfile': 'yyyy'}
-    ''' 
+    """
     import re
+
     f_name = ""
     f_args = {}
-    pattern = r'(\w[\w\d_]*)\((.*)\)$'
+    pattern = r"(\w[\w\d_]*)\((.*)\)$"
     match = re.match(pattern, s)
     if match:
         f_name = match.group(1)
@@ -54,6 +56,7 @@ def function_parse(s):
             else:
                 f_args[kv[0].strip()] = ""
     return f_name, f_args
+
 
 class NCTasks(object):
     """
@@ -70,9 +73,7 @@ class NCTasks(object):
         outfmt = "{:32} {:84} {:8} {:8} {:8} {:8}"
         output = []
         output.append(
-            outfmt.format(
-                "task id", "content", "create", "progress", "update", "pid"
-            )
+            outfmt.format("task id", "content", "create", "progress", "update", "pid")
         )
         output.append(
             outfmt.format("-" * 32, "-" * 84, "-" * 8, "-" * 8, "-" * 8, "-" * 8)
@@ -115,13 +116,13 @@ class NCTasks(object):
             }
 
         key = nc_id(value)
-        # if key not in self.taskd ?
         self.taskq.put(key)
         self.taskd[key] = new_task()
 
     def queue_del(self, key):
         if key not in self.taskd:
             return False
+
         try:
             v = self.taskd[key]
             pid = v["pid"]
@@ -133,11 +134,13 @@ class NCTasks(object):
         qlist = []
         while not self.taskq.empty():
             qlist.append(self.taskq.get())
+
         try:
             qlist.remove(key)
             del self.taskd[key]
         except:
             pass
+
         for e in qlist:
             self.taskq.put(e)
 
@@ -148,17 +151,17 @@ class NCTasks(object):
 
 
 class NCMessage(object):
-    StatusCode_OK = 200
-    StatusCode_BadRequest = 400
-    StatusCode_NotFound = 404
-    StatusCode_ServerError = 500
+    Status_OK = 200
+    Status_BadRequest = 400
+    Status_NotFound = 404
+    Status_Error = 500
 
     REQUEST_METHOD = ("GET", "PUT", "DELETE", "TRACE")
     RESPONSE_STATUS = (
-        StatusCode_OK,
-        StatusCode_BadRequest,
-        StatusCode_NotFound,
-        StatusCode_ServerError,
+        Status_OK,
+        Status_BadRequest,
+        Status_NotFound,
+        Status_Error,
     )
 
     @classmethod
@@ -166,15 +169,15 @@ class NCMessage(object):
         """Decode JSON string to dict object"""
         try:
             d = json.loads(message)
+            if ("method" not in d) or (d["method"] not in NCMessage.REQUEST_METHOD):
+                return None
+            if ("content" not in d) or (not isinstance(d["content"], str)):
+                return None
+            if ("length" not in d) or (not isinstance(d["length"], int)):
+                return None
+            if len(d["content"]) != d["length"]:
+                return None
         except:
-            return None
-        if ("method" not in d) or (d["method"] not in NCMessage.REQUEST_METHOD):
-            return None
-        if ("content" not in d) or (not isinstance(d["content"], str)):
-            return None
-        if ("length" not in d) or (not isinstance(d["length"], int)):
-            return None
-        if len(d["content"]) != d["length"]:
             return None
         return d
 
@@ -183,18 +186,15 @@ class NCMessage(object):
         """Decode JSON string to dict object"""
         try:
             d = json.loads(message)
+            if ("status" not in d) or (d["status"] not in NCMessage.RESPONSE_STATUS):
+                return None
+            if ("content" not in d) or (not isinstance(d["content"], str)):
+                return None
+            if ("length" not in d) or (not isinstance(d["length"], int)):
+                return None
+            if len(d["content"]) != d["length"]:
+                return None
         except:
-            return None
-        if ("status" not in d) or (
-            not isinstance(d["status"], int)
-            or (d["status"] not in NCMessage.RESPONSE_STATUS)
-        ):
-            return None
-        if ("content" not in d) or (not isinstance(d["content"], str)):
-            return None
-        if ("length" not in d) or (not isinstance(d["length"], int)):
-            return None
-        if len(d["content"]) != d["length"]:
             return None
         return d
 
@@ -222,26 +222,26 @@ class NCHandler(socketserver.StreamRequestHandler):
         id = dmsg["content"]
         t = self.server.tasks.get(id)
         if t is None:
-            return NCMessage.encode_response(NCMessage.StatusCode_NotFound, f"get {id}")
+            return NCMessage.encode_response(NCMessage.Status_NotFound, f"get {id}")
         # get progress status ?
-        return NCMessage.encode_response(NCMessage.StatusCode_OK, str(t["progress"]))
+        return NCMessage.encode_response(NCMessage.Status_OK, str(t["progress"]))
 
     def handle_put_message(self, dmsg):
         """PUT request: content -- msg/Response: content == put msg"""
         msg = dmsg["content"]
         self.server.tasks.queue_put(msg)
-        return NCMessage.encode_response(NCMessage.StatusCode_OK, f"put {msg}")
+        return NCMessage.encode_response(NCMessage.Status_OK, f"put {msg}")
 
     def handle_delete_message(self, dmsg):
-        """ DELETE content -- id"""
-        status = NCMessage.StatusCode_OK
+        """DELETE content -- id"""
+        status = NCMessage.Status_OK
         id = dmsg["content"]
         if not self.server.tasks.queue_del(id):
-            status = NCMessage.StatusCode_NotFound
+            status = NCMessage.Status_NotFound
         return NCMessage.encode_response(status, f"delete {id}")
 
     def handle_message(self, request_message):
-        """Only echo message if request is not empy else all server.tasks for debug"""
+        """Only echo message if request is not empy else server.tasks will send back for debug"""
         if request_message == "":
             return str(self.server.tasks)
 
@@ -253,7 +253,7 @@ class NCHandler(socketserver.StreamRequestHandler):
             # >>> json.dumps(ddd)
             # '{"A": "AAA", "a": "aaa", "B": 123, "b": 456}'
             response_message = NCMessage.encode_response(
-                NCMessage.StatusCode_BadRequest, request_message.replace('"', "'")
+                NCMessage.Status_BadRequest, request_message.replace('"', "'")
             )
         else:
             # save message to netcat_recv_queue ?
@@ -265,9 +265,9 @@ class NCHandler(socketserver.StreamRequestHandler):
                 response_message = self.handle_delete_message(dmsg)
             else:  # if d["method"] = "TRACE":
                 response_message = NCMessage.encode_response(
-                    NCMessage.StatusCode_OK, dmsg["content"]
+                    NCMessage.Status_OK, dmsg["content"]
                 )
-        # '\n' is for client readline style
+        # '\n' is readline style for client
         return response_message + "\n"
 
     def handle_request(self):
@@ -287,9 +287,10 @@ class NCHandler(socketserver.StreamRequestHandler):
         return False
 
     def handle(self):
-        '''current client read loop ...'''
+        """current client read loop ..."""
         while self.handle_request():
             pass
+
 
 class NCServer(socketserver.ThreadingTCPServer):
     # allow_reuse_address come from ThreadingTCPServer
@@ -310,7 +311,7 @@ class NCServer(socketserver.ThreadingTCPServer):
         signal.signal(signal.SIGCHLD, self.clean_battlefield)
 
     def clean_battlefield(self, signum, frame):
-        '''signam, frame is for signal.signal(), no meaning here '''
+        """signam, frame is for signal.signal(), no meaning here"""
         # Clean zombie process
         try:
             pid, _ = os.waitpid(-1, os.WNOHANG)
@@ -332,7 +333,7 @@ class NCServer(socketserver.ThreadingTCPServer):
         id = nc_id(content)
         pid = os.getpid()
         for i in range(100):
-            time.sleep(0.1)
+            time.sleep(0.2)
             m = {"id": id, "progress": i + 1, "pid": pid}
             q.put(m)
 
@@ -349,13 +350,16 @@ class NCServer(socketserver.ThreadingTCPServer):
             id = self.tasks.queue_get()
             t = self.tasks.get(id)
             pargs = (self.progress_queue, t["content"])
-            p = multiprocessing.Process(target=self.handle_service, args=pargs, daemon=True)
+            p = multiprocessing.Process(
+                target=self.handle_service, args=pargs, daemon=True
+            )
             p.start()
             self.active_children.add(p.pid)
 
     def serve_forever(self):
         threading.Thread(target=self.working_forever, args=(), daemon=True).start()
         return super().serve_forever()
+
 
 class NCJobs(object):
     """
@@ -373,13 +377,9 @@ class NCJobs(object):
         outfmt = "{:32} {:84} {:8} {:8} {:8}"
         output = []
         output.append(
-            outfmt.format(
-                "task id", "content", "create", "progress", "update"
-            )
+            outfmt.format("task id", "content", "create", "progress", "update")
         )
-        output.append(
-            outfmt.format("-" * 32, "-" * 84, "-" * 8, "-" * 8, "-" * 8)
-        )
+        output.append(outfmt.format("-" * 32, "-" * 84, "-" * 8, "-" * 8, "-" * 8))
         for k, v in self.jobs.items():
             i = v["content"]
             c = time.strftime("%H:%M:%S", time.localtime(v["created"]))
@@ -417,6 +417,7 @@ class NCJobs(object):
     def delete(self, key):
         if key not in self.jobs:
             return False
+        # self.dels used for remote sync, so add here
         self.dels.add(key)
         del self.jobs[key]
         return True
@@ -443,7 +444,7 @@ class NCClient(object):
 
         self.timer = None
         self.start_timer()
-    
+
     def connect(self):
         if not self.alive:
             try:
@@ -457,42 +458,69 @@ class NCClient(object):
         else:
             self.hello("Hello, NC Server !")
 
-    def sync_tasks(self):
-        if not self.alive:
-            print("Remote service shutdown ...")
-            return
-        print("Syncing tasks with remote ...")
-        # 1) Update progress
-        for id in self.jobs.keys():
-            d = self.rpc_get(id)
-            if d > 0:
-                self.jobs.update_progress(id, d)
+    def sync_task(self):
+        """Sync jobs status with remote"""
 
-        # 2) Put task to remote
+        def rpc_get(id):
+            d = self.rpc(NCMessage.encode_request("GET", id))
+            try:
+                progress = -1
+                if d and d["status"] == NCMessage.Status_OK:
+                    progress = int(d["content"])
+                return progress
+            except:
+                return -1
+
+        def rpc_put(content):
+            d = self.rpc(NCMessage.encode_request("PUT", content))
+            try:
+                return d and d["status"] == NCMessage.Status_OK
+            except:
+                return False
+
+        def rpc_delete(id):
+            d = self.rpc(NCMessage.encode_request("DELETE", id))
+            try:
+                return d and d["status"] in (
+                    NCMessage.Status_OK,
+                    NCMessage.Status_NotFound,
+                )
+            except:
+                return False
+
+        if not self.alive:
+            # print("Remote service shutdown ...")
+            return
+
+        # print("Syncing tasks with remote ...")
+        # 1) Put task to remote
         alist = self.jobs.adds_list()
         for id in alist:
             v = self.jobs.get(id)
             try:
-                if v:
-                    if self.rpc_put(v['content']):
-                        self.jobs.adds_delete(id)
-                else:
-                    # not found id in self.jobs, exception !!!
-                    print("xxxx8888 ------------------------------------xxxx8888", id)
-                    # self.jobs.adds_delete(id)
+                if v and rpc_put(v["content"]):
+                    # put task to remote OK, so delete it from adds
+                    self.jobs.adds_delete(id)
             except:
                 pass
 
-        # 3) Delete task from remote
+        # 2) Delete task from remote
         dlist = self.jobs.dels_list()
         for id in dlist:
-            if self.rpc_delete(id):
+            if rpc_delete(id):
+                # nofify remote 'delete id' OK, delete dels
                 self.jobs.dels_delete(id)
 
+        # 3) Update progress
+        for id in self.jobs.keys():
+            d = rpc_get(id)
+            if d > 0:
+                self.jobs.update_progress(id, d)
+
     def start_timer(self):
-        # do period jobs
+        # Do period jobs
         self.connect()
-        self.sync_tasks()
+        self.sync_task()
         self.timer = threading.Timer(3, self.start_timer)
         self.timer.start()
 
@@ -512,42 +540,14 @@ class NCClient(object):
                     if data.find(b"\n") >= 0:
                         break
                 else:
+                    # socket read 0 bytes ?
                     break
         except Exception as err:
-            self.alive = False
             print(f"Client RPC error: {err}")
+            self.alive = False
+            return None
 
         return NCMessage.decode_response(received_data)
-
-    def rpc_get(self, id):
-        progress = -1
-        d = self.rpc(NCMessage.encode_request("GET", id))
-        try:
-            if d and d["status"] == NCMessage.StatusCode_OK:
-                progress = int(d["content"])
-        except:
-            pass
-        return progress
-
-    def rpc_put(self, content):
-        ret = False
-        d = self.rpc(NCMessage.encode_request("PUT", content))
-        try:
-            if d and d["status"] == NCMessage.StatusCode_OK:
-                ret = True
-        except:
-            pass
-        return ret
-
-    def rpc_delete(self, id):
-        ret = False
-        d = self.rpc(NCMessage.encode_request("DELETE", id))
-        try:
-            if d and d["status"] in (NCMessage.StatusCode_OK, NCMessage.StatusCode_NotFound):
-                ret = True
-        except:
-            pass
-        return ret
 
     def keys(self):
         return self.jobs.keys()
