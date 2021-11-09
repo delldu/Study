@@ -351,7 +351,65 @@ def hide_layer(layer, hide=True):
     layer.keyframe_insert('hide')
     layer.keyframe_insert('hide_render')
     layer.keyframe_insert('hide_select')
+    
+    
+import bpy
+frameStart = 1
+frameEnd = 155
+frameStep = 50
+viewer_area = None
+viewer_space = None
+
+for area_search in bpy.context.screen.areas:
+    if viewer_area == None and area_search.type == "IMAGE_EDITOR":
+        viewer_area = area_search
+        break
+
+if viewer_area == None:
+    viewer_area = bpy.context.screen.areas[0]
+    viewer_area.type = "IMAGE_EDITOR"
+
+for space in viewer_area.spaces:
+    if space.type == "IMAGE_EDITOR":
+        viewer_space = space
+
+path = "/home/dell/noise.mp4"
+img = bpy.data.images.load(path)
+w = img.size[0]
+h = img.size[1]
+viewer_space.image = img
+
+frame = 1
+for frame in range(1, 50, 10):
+    viewer_space.image_user.frame_offset = frame
+    #switch back and forth to force refresh
+    viewer_space.draw_channels = 'COLOR_ALPHA'
+    viewer_space.draw_channels = 'COLOR'
+    pixels = list(viewer_space.image.pixels)
+    tmp = bpy.data.images.new(name="sample"+str(frame), width=w, height=h, alpha=False, float_buffer=False)
+    tmp.pixels = pixels
+
+img.user_clear()
+bpy.data.images.remove(img)
+
 ```
+
+```
+img = bpy.data.images.load("/home/dell/noise.mp4")
+img.pixels -- bpy.data.images['noise.mp4'].pixels
+dir(img.pixels) -- ['foreach_get', 'foreach_set']
+
+import numpy as np
+w, h = img.size
+n = img.frame_duration
+pixel_data = np.zeros((w, h, 4), 'f')
+img.pixels.foreach_get(pixel_data.ravel())
+print(pixel_data.mean(), pixel_data.std())
+```
+
+
+
+
 
 ### VSE
 
@@ -401,6 +459,41 @@ bpy.context.window_manager.progress_end()
 
 bpy.context.selected_sequences
 bpy.context.scene.sequence_editor.sequences.new_effect(name="bug", type="TEXT", channel=1, frame_start=1, frame_end=70)
+
+
+
+
+import bpy
+from pathlib import Path
+
+dir_path = "/home/dell/ZDisk/Workspace/develop/VideoXYZ/clean/dataset/predict/input/"
+img_dir = Path(dir_path)
+glob = "*.png"
+frame_duration = 24
+files = sorted(list(img_dir.glob(glob)))
+
+# get sequence editor
+scene = bpy.context.scene
+#scene.sequence_editor_clear()
+sed = scene.sequence_editor_create()
+seq = sed.sequences
+duration = len(files)
+# add image strip using first
+fp = files.pop(0)
+imstrip = seq.new_image(
+    name="newvideo.mp4",
+    filepath=str(fp),
+    frame_start=1,
+    channel=1,
+    )
+# add the elements 
+while files:
+    imstrip.elements.append(files.pop(0).name)
+    
+imstrip.frame_final_duration = duration
+imstrip.update() 
+
+https://blender.stackexchange.com/questions/46601/how-to-load-a-movie-file-into-blender-and-re-export-it-as-a-sequence-of-images
 ```
 
 ### Render
@@ -409,11 +502,51 @@ bpy.context.scene.sequence_editor.sequences.new_effect(name="bug", type="TEXT", 
 bpy.context.scene.render -- bpy.data.scenes['Scene'].render
 bpy.data.scenes['Scene'].render.resolution_x
 bpy.data.scenes['Scene'].render.resolution_percentage -- 100
+
+
+import bpy
+def my_handler(scene):
+    print("Frame Change", scene.frame_current)
+    bpy.data.scenes['Scene'].sequence_editor.sequences_all["Text"].text=str(int(scene.frame_current/10))
+bpy.app.handlers.frame_change_pre.append(my_handler)
+
+Animate a Character in 15 Minutes in Blender
+https://github.com/DeepBlender/DeepDenoiser/tree/master/Blender
+https://www.immersivelimit.com/tutorials/blender-for-ai-developers
+
+https://github.com/Cartucho/vision_blender
+
+```
+
+```
+# AUTHOR Luigi
+# VERSION 0.0.1
+#功能：直接渲染特定帧viewport画面
+#分为三步，首先关闭 viewport overlays,第二步跳转到指定的帧，第三部渲染并自动命名。二三步为循环。最后再打开overlay。
+
+import bpy
+import time
+
+for area in bpy.context.screen.areas:
+    if area.type == 'VIEW_3D':
+        for space in area.spaces:
+            if space.type == 'VIEW_3D':
+                space.overlay.show_overlays=False #turn off viewport layout
+                break
+
+list = ['55', '90', '125'] #set the list of frame you want
+OUTPUT = "C:/Users/luigi/Pictures"   # Where to save Images
+
+for i in list:
+    bpy.context.scene.frame_set(int(i)) #jump to frame
+    timenow = time.strftime("%m%d %H%M%S", time.localtime()) #add timemark
+    filepath = OUTPUT + "/" + str(timenow) + ".png"
+    bpy.context.scene.render.filepath = filepath
+    bpy.ops.render.opengl(write_still=True, view_context=True) #render viewport
 ```
 
 
-
-### Grease Pencel
+### Annotation
 
 ```
 bpy.data.grease_pencils[0] -- bpy.data.grease_pencils['Annotations']
@@ -423,6 +556,20 @@ pen.layers[0].frames -- bpy.data.grease_pencils['Annotations'].layers["Note"].fr
 s = pen.layers[0].frames[0].strokes
 for p in s.data.strokes[0].points:
 	print(p.co.x, p.co.y, p.co.z)
+	
+f =  bpy.data.grease_pencils['Annotations'].layers['Note'].frames[0]
+dir(f) -- ['frame_number','strokes']
+bpy.data.movieclips['noise.mp4'].grease_pencil
+# -- bpy.data.grease_pencils['cbox']
+
+```
+
+### Tracker
+
+```
+https://gitlab.com/ChameleonScales/step_tracker/
+https://blender.stackexchange.com/questions/41150/parent-for-trackers-with-python-script
+https://blenderartists.org/t/tracker-data/572292/3
 ```
 
 
@@ -459,10 +606,11 @@ def MarkerSize():
     clip_width = clip.size[0]
     clip_height = clip.size[1]
 
+	height = int(pattern[1] * clip_height)
+    width = int(pattern[0] * clip_width)
+
 	row = height - int(marker.co[1] * clip_height)
     col = int(marker.co[0] * clip_width)
-    height = int(pattern[1] * clip_height)
-    width = int(pattern[0] * clip_width)
 
 	print("file path:", clip.filepath)
 	print("current frame:", bpy.context.scene.frame_current)
@@ -517,6 +665,68 @@ def MaskSize():
 MaskSize()
 ```
 
+```
+import bpy
+import threading,time
+
+class Create_obj:
+    def __init__(self,name):
+        self.obj = bpy.data.objects[name]
+    
+    def obj_loc(self,data):
+        self.obj.location[2] = data
+
+    def obj_animation(self,data,fra):
+        self.obj.location[2] = data
+        self.obj.keyframe_insert(data_path="location",frame=fra,index=2)
+
+
+if __name__ == "__main__":
+    obj_1 = Create_obj('Cube')
+    data = iter(([i*0.1 for i in range(30)]+[3-i*0.1 for i in range(30)])*100)
+    def test(ed):
+        global obj_1,data
+        st = time.time()
+        while time.time()-st<ed:
+            print("working")
+            obj_1.obj_loc(next(data))
+            time.sleep(0.05)
+            
+        print("done")
+        # 打印的信息可以在blender的系统控制台查看
+
+    def animation(ed):
+        global obj_1,data
+
+        st = time.time()
+        fra = 0#blender默认一秒24帧
+        while time.time()-st<ed:
+            print(fra)
+            
+            obj_1.obj_animation(next(data),fra)
+            
+            time.sleep(0.05)
+            fra += 1
+        print("done")
+
+    t=threading.Thread(target=animation,args=(10,))
+    t.start()
+```
+
+Panel
+
+```
+tex = bpy.data.textures.new(name='Texture', type='IMAGE')
+
+
+# tex = bpy.data.textures['.hidden']
+col = layout.box().column()
+col.template_preview(tex)
+
+```
+
+
+
 ### Socket
 
 ```
@@ -541,4 +751,58 @@ BLENDERKIT_SETTINGS_FILENAME = os.path.join(_presets, "bkit.json")
 
 ```
 
+## 5. Development
+
+   ```
+list_foreach = lambda x: [e for e in x]
+
+list_members = lambda x: [f"{e}: {getattr(x, e)}" for e in dir(x) if not e.startswith("_") and  getattr(x,e ) is not None]
+
+def print_members(x, pattern=None):
+    import re
+    elements = [e for e in dir(x) if not e.startswith("_") and getattr(x,e) is not None]
+    for e in elements:
+        if pattern is None:
+            print(e, ":", getattr(x,e))
+        elif re.match(pattern, e):
+            print(e, ":", getattr(x,e))
+
+   ```
+
+## 6. Learning
+
+   ```
+   https://www.zcool.com.cn/article/ZMTI3MTc4OA==.html
+   https://github.com/cgvirus/Blender-Compositor-Extra-Nodes
+   bpy.data.node_groups[0].nodes['Custom Node']['my_string_prop']
+   
+   CustomNodeGroupTemplate
+   https://pastebin.com/gnF0iS7B
+   
+   animation nodes和sverchock
+   https://github.com/cgvirus/Blender-Compositor-Disc-Cache-Realtime-Preview-Addon
+   
+   https://github.com/cgvirus/blender-vse-easy-proxy
+   
+   https://blender.stackexchange.com/questions/71454/is-it-possible-to-make-a-sequence-of-renders-and-give-the-user-the-option-to-can
+   
+https://ostechnix.com/20-ffmpeg-commands-beginners/
+   ```
+
+### Panel
+
+```
+import bpy
+from bpy.types import Panel
+
+
+import bpy
+def every_2_seconds():
+    print("Hello World")
+    return 2.0
+bpy.app.timers.register(every_2_seconds)
+https://docs.blender.org/api/current/bpy.app.timers.html
+https://github.com/snuq/VSEQF
+
+```
 

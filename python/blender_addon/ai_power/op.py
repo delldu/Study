@@ -48,7 +48,7 @@ def active_strip():
     except AttributeError:
         return None
 
-def create_mask():
+# def create_mask():
 
 
 class AIVideoOperator(Operator):
@@ -77,7 +77,7 @@ class AIVideoOperator(Operator):
             s.frame_start = a.frame_start
         # align with activate strip
         s.frame_final_duration = a.frame_duration
-        s.blend_alpha = 0.5
+        s.blend_alpha = 1.0
 
         return s
 
