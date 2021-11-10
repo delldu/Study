@@ -14,6 +14,28 @@ from bpy.types import Operator
 from bpy.utils import register_classes_factory
 
 
+def render(self, context):
+    scene = context.scene
+    render = scene.render
+
+    scene.frame_start = 1
+    scene.frame_end = 25
+
+    render.resolution_x = 1280
+    render.resolution_y = 720
+    render.fps = 25
+
+    render.image_settings.file_format = 'FFMPEG'
+    render.ffmpeg.format = 'MPEG4'
+    render.ffmpeg.codec = 'H264'
+
+    render.ffmpeg.constant_rate_factor = 'HIGH'
+    render.ffmpeg.ffmpeg_preset = 'BEST'
+
+    bpy.ops.render.render(animation=True)
+
+
+
 class NetcatStartOperator(Operator):
     """Start netcat server"""
 

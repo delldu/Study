@@ -9,18 +9,18 @@
 
 help()
 {
-	echo "pack  Package ai power files"
-	echo "list  List ai power package"
+	echo "pack  Package ai video files"
+	echo "list  List ai video package"
 }
 
 pack()
 {
-	zip ai_power.zip ai_power/*.py
+	zip ai_video.zip ai_video/*.py
 }
 
 list()
 {
-	unzip -v ai_power.zip
+	unzip -v ai_video.zip
 }
 
 if [ "$*" == "" ] ;

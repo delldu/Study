@@ -4,6 +4,7 @@ import time
 from bpy.types import Operator, Panel, PropertyGroup
 from bpy.props import PointerProperty, StringProperty, FloatProperty
 
+
 class VideoSMaskSettings(PropertyGroup):
     url: StringProperty(
         name="URL",

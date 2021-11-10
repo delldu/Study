@@ -20,39 +20,45 @@ from bpy.utils import (
     unregister_class,
 )
 
+
 class AIVideoMenu(Menu):
     bl_label = "AI"
     bl_idname = "POWER_SEQUENCER_MT_ai_video_menu"
 
     def draw(self, context):
         layout = self.layout
-        layout.operator("ai.video_scene")
+
+        layout.operator_context = 'INVOKE_DEFAULT'
+
+        layout.operator("ai_video.scene")
         layout.separator()
-        layout.operator("ai.video_clean")
-        layout.operator("ai.video_color")
-        layout.operator("ai.video_light")
-        layout.operator("ai.video_stable")
+        layout.operator("ai_video.clean")
+        layout.operator("ai_video.color")
+        layout.operator("ai_video.light")
+        layout.operator("ai_video.stable")
         layout.separator()
-        layout.operator("ai.video_smask")
-        layout.operator("ai.video_pmask")
-        layout.operator("ai.video_patch")
+        layout.operator("ai_video.smask")
+        layout.operator("ai_video.pmask")
+        layout.operator("ai_video.patch")
         layout.separator()
-        layout.operator("ai.video_zoom")
-        layout.operator("ai.video_slow")
+        layout.operator("ai_video.zoom")
+        layout.operator("ai_video.slow")
         layout.separator()
-        layout.operator("ai.video_face")
-        layout.operator("ai.video_pose")
+        layout.operator("ai_video.face")
+        layout.operator("ai_video.pose")
+
 
 def draw_item(self, context):
     layout = self.layout
     layout.menu(AIVideoMenu.bl_idname)
+
 
 def register():
     register_class(AIVideoMenu)
     bpy.types.SEQUENCER_HT_header.prepend(draw_item)
     # bpy.types.CLIP_HT_header
 
+
 def unregister():
     unregister_class(AIVideoMenu)
     bpy.types.SEQUENCER_HT_header.remove(draw_item)
-            

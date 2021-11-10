@@ -17,22 +17,25 @@ bl_info = {
     "version": (1, 0),
     "blender": (2, 93, 0),
     "wiki_url": "",
-    "tracker_url":"",
-    "category": "Sequencer"}
+    "tracker_url": "",
+    "category": "Sequencer",
+}
 
 from . import op
 from . import ui
+
 
 def register():
     print("Hello, AI Video !")
     op.register()
     ui.register()
 
+
 def unregister():
     op.unregister()
     ui.unregister()
     print("Goodbye, AI Video !")
 
-if __name__ == '__main__':
-    register()
 
+if __name__ == "__main__":
+    register()
