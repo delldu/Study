@@ -26,7 +26,7 @@ from . import nc
 AI_VIDEO_CACHE_PATH = "/tmp/ai_video"
 video_todo_list = app.VideoStrips()
 ai_video_timer_duration = 2.0
-ai_video_nc = nc.NCClient('localhost', 9999)
+ai_video_nc = nc.NCClient("localhost", 9999)
 
 
 def ai_video_timer():
@@ -51,8 +51,8 @@ def ai_video_timer():
         else:
             # update progress
             id = video_todo_list.get(s.name)
-            if id: 
-                percent = ai_video_nc.get(id)/100.0
+            if id:
+                percent = ai_video_nc.get(id) / 100.0
                 s.blend_alpha = -0.2 * percent + 0.8
 
     return ai_video_timer_duration
@@ -84,7 +84,7 @@ def active_strip():
 
 
 def active_bimage():
-    '''Find bundling image'''
+    """Find bundling image"""
 
     images = image_sequences()
     if len(images) < 1:
@@ -126,10 +126,17 @@ def active_bbox():
                 if max(xset) - min(xset) < 0.01 or max(yset) - min(yset) < 0.01:
                     continue
                 # box = [frame_number, x1, x2, y1, y2]
-                return {'nframe': f.frame_number, 'x1': min(xset), 'x2': max(xset), 'y1': min(yset), 'y2': max(yset)}
+                return {
+                    "nframe": f.frame_number,
+                    "x1": min(xset),
+                    "x2": max(xset),
+                    "y1": min(yset),
+                    "y2": max(yset),
+                }
     except:
         pass
     return None
+
 
 def aviable_channel():
     channel = 0
@@ -138,10 +145,11 @@ def aviable_channel():
         channel = max(s.channel, channel)
     return channel + 1
 
+
 def create_bstrip(a, prefix):
-    '''
+    """
     Create bundling strip, a means activte_strip
-    '''
+    """
     try:
         seqs = current_sequences()
         if len(seqs) < 1:
@@ -181,7 +189,8 @@ class AIVideoOperator(Operator):
 
     def setup_task(self, name, cmd):
         ai_video_nc.put(cmd)
-        video_todo_list.put(name, nc.nc_id(cmd))    
+        video_todo_list.put(name, nc.nc_id(cmd))
+
 
 class AI_Video_OT_Scene(AIVideoOperator):
     """Auto cut scenes"""
@@ -202,7 +211,6 @@ class AI_Video_OT_Scene(AIVideoOperator):
         self.setup_task(s.name, cmd)
 
         return {"FINISHED"}
-
 
 
 class AI_Video_OT_Clean(AIVideoOperator):
@@ -281,6 +289,7 @@ class AI_Video_OT_Light(AIVideoOperator):
 
         return {"FINISHED"}
 
+
 class AI_Video_OT_Smooth(AIVideoOperator):
     """Video smooth"""
 
@@ -313,7 +322,7 @@ class AI_Video_OT_SMask(AIVideoOperator):
         if bbox is None:
             self.warning("NO annotation or less points (< 4) for bbox")
             return {"CANCELLED"}
-        #print("bbox == ", bbox)
+        # print("bbox == ", bbox)
 
         a = active_strip()
         # a is valid for poll method
@@ -322,7 +331,15 @@ class AI_Video_OT_SMask(AIVideoOperator):
             self.warning("SMask task is going on ... ?")
             return {"CANCELLED"}
 
-        cmd = app.VideoCommand.smask(a.filepath, bbox['nframe'], bbox['x1'], bbox['x2'], bbox['y1'], bbox['y2'], s.filepath)
+        cmd = app.VideoCommand.smask(
+            a.filepath,
+            bbox["nframe"],
+            bbox["x1"],
+            bbox["x2"],
+            bbox["y1"],
+            bbox["y2"],
+            s.filepath,
+        )
         self.setup_task(s.name, cmd)
 
         return {"FINISHED"}
@@ -455,6 +472,7 @@ class AI_Video_OT_Pose(AIVideoOperator):
 
         cmd = app.VideoCommand.pose(a.filepath, pose_image.filepath, s.filepath)
         self.setup_task(s.name, cmd)
+
 
 classes = (
     AI_Video_OT_Scene,

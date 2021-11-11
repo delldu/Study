@@ -12,6 +12,7 @@
 
 import re
 
+
 def function_parse(s):
     """
     example:
@@ -35,9 +36,9 @@ def function_parse(s):
 
 
 class VideoCommand(object):
-    '''
+    """
     Video Application SDK
-    '''
+    """
 
     @classmethod
     def clean(cls, infile, noise_level, outfile):
@@ -149,5 +150,3 @@ class VideoStrips(object):
 
     def names(self):
         return [e for e in self.data.keys()]
-
-
