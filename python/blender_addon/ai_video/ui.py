@@ -20,20 +20,8 @@ from bpy.utils import (
     unregister_class,
 )
 
-from op import (
-    AI_Video_OT_Scene,
-    AI_Video_OT_Clean,
-    AI_Video_OT_Color,
-    AI_Video_OT_Light,
-    AI_Video_OT_Smooth,
-    AI_Video_OT_SMask,
-    AI_Video_OT_PMask,
-    AI_Video_OT_Patch,
-    AI_Video_OT_Zoom,
-    AI_Video_OT_Slow,
-    AI_Video_OT_Face,
-    AI_Video_OT_Pose,
-)
+from . import op
+
 
 class AIVideoMenu(Menu):
     bl_label = "AI"
@@ -42,24 +30,24 @@ class AIVideoMenu(Menu):
     def draw(self, context):
         layout = self.layout
 
-        layout.operator_context = 'INVOKE_DEFAULT'
+        layout.operator_context = "INVOKE_DEFAULT"
 
-        layout.operator(AI_Video_OT_Scene.bl_idname, icon='SCENE')
+        layout.operator(op.AI_Video_OT_Scene.bl_idname, icon="SCENE")
         layout.separator()
-        layout.operator(AI_Video_OT_Clean.bl_idname, icon='BRUSH_DATA')
-        layout.operator(AI_Video_OT_Color.bl_idname, icon='COLORSET_02_VEC')
-        layout.operator(AI_Video_OT_Light.bl_idname, icon='OUTLINER_OB_LIGHT')
-        layout.operator(AI_Video_OT_Smooth.bl_idname, icon='CON_CAMERASOLVER')
+        layout.operator(op.AI_Video_OT_Clean.bl_idname, icon="BRUSH_DATA")
+        layout.operator(op.AI_Video_OT_Color.bl_idname, icon="COLORSET_02_VEC")
+        layout.operator(op.AI_Video_OT_Light.bl_idname, icon="OUTLINER_OB_LIGHT")
+        layout.operator(op.AI_Video_OT_Smooth.bl_idname, icon="CON_CAMERASOLVER")
         layout.separator()
-        layout.operator(AI_Video_OT_SMask.bl_idname, icon='MOD_MASK')
-        layout.operator(AI_Video_OT_PMask.bl_idname, icon='SHADING_BBOX')
-        layout.operator(AI_Video_OT_Patch.bl_idname, icon='PARTICLE_PATH')
+        layout.operator(op.AI_Video_OT_SMask.bl_idname, icon="MOD_MASK")
+        layout.operator(op.AI_Video_OT_PMask.bl_idname, icon="SHADING_BBOX")
+        layout.operator(op.AI_Video_OT_Patch.bl_idname, icon="PARTICLE_PATH")
         layout.separator()
-        layout.operator(AI_Video_OT_Zoom.bl_idname, icon='ZOOM_IN')
-        layout.operator(AI_Video_OT_Slow.bl_idname)
+        layout.operator(op.AI_Video_OT_Zoom.bl_idname, icon="ZOOM_IN")
+        layout.operator(op.AI_Video_OT_Slow.bl_idname)
         layout.separator()
-        layout.operator(AI_Video_OT_Face.bl_idname, icon='SURFACE_NTORUS')
-        layout.operator(AI_Video_OT_Pose.bl_idname, icon='POSE_HLT')
+        layout.operator(op.AI_Video_OT_Face.bl_idname, icon="SURFACE_NTORUS")
+        layout.operator(op.AI_Video_OT_Pose.bl_idname, icon="POSE_HLT")
 
 
 def draw_item(self, context):

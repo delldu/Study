@@ -9,89 +9,53 @@
 # ***
 # ************************************************************************************/
 #
+
+# THIS FILE IS ONLY FOR TEST !!!
+
+
 import argparse
 import pdb
 import time
 
-from nc import nc_id, function_parse, NCClient, NCServer
+from nc import nc_id, NCClient, NCServer
+from app import VideoCommand
 
 
 class VideoClient(NCClient):
     """Video client SDK"""
 
     def clean(self, infile, noise_level, outfile):
-        f_message = (
-            f"clean(infile={infile}, noise_level={noise_level}, outfile={outfile})"
-        )
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+        self.put(VideoCommand.clean(infile, noise_level, outfile))
 
     def color(self, infile, color_picture, outfile):
-        f_message = (
-            f"color(infile={infile}, color_picture={color_picture}, outfile={outfile})"
-        )
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+        self.put(VideoCommand.color(infile, color_picture, outfile))
 
     def light(self, infile, outfile):
-        f_message = f"light(infile={infile}, outfile={outfile})"
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+        self.put(VideoCommand.light(infile, outfile))
 
     def smooth(self, infile, outfile):
-        f_message = f"smooth(infile={infile}, outfile={outfile})"
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+        return self.put(VideoCommand.smooth(infile, outfile))
 
-    def smask(self, infile, nframe, r, c, h, w, outfile):
-        f_message = f"smask(infile={infile}, nframe={nframe}, r={r}, c={c}, h={h}, w={w}, outfile={outfile})"
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+    def smask(self, infile, nframe, x1, x2, y1, y2, outfile):
+        return self.put(VideoCommand.smask(infile, nframe, x1, x2, y1, y2, outfile))
 
     def pmask(self, infile, outfile):
-        f_message = f"pmask(infile={infile}, outfile={outfile})"
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+        return self.put(VideoCommand.pmask(infile, outfile))
 
     def patch(self, infile, outfile):
-        f_message = f"patch(infile={infile}, outfile={outfile})"
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+        return self.put(VideoCommand.patch(infile, outfile))
 
-    def zoom(self, infile, zoom_x, outfile):
-        f_message = f"zoom(infile={infile}, zoom_x={zoom_x}, outfile={outfile})"
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+    def zoom(self, infile, outfile):
+        return self.put(VideoCommand.zoom(infile, outfile))
 
     def slow(self, infile, slow_x, outfile):
-        f_message = f"slow(infile={infile}, slow_x={slow_x}, outfile={outfile})"
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+        return self.put(VideoCommand.slow(infile, slow_x, outfile))
 
     def face(self, infile, face_picture, outfile):
-        f_message = (
-            f"face(infile={infile}, face_picture={face_picture}, outfile={outfile})"
-        )
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+        return self.put(VideoCommand.face(infile, face_picture, outfile))
 
-    def body(self, infile, body_picture, outfile):
-        f_message = (
-            f"body(infile={infile}, body_picture={body_picture}, outfile={outfile})"
-        )
-        f_name, f_args = function_parse(f_message)
-        assert f_name != "", f"{f_message} is not valid function."
-        return self.put(f_message)
+    def pose(self, infile, pose_picture, outfile):
+        return self.put(VideoCommand.pose(infile, pose_picture, outfile))
 
 
 class VideoServer(NCServer):
@@ -247,11 +211,11 @@ def client_connect(host, port):
     nc.pmask("input.mp4", "output.mp4")
     nc.patch("input.mp4", "output.mp4")
 
-    nc.zoom("input.mp4", 4, "output.mp4")
+    nc.zoom("input.mp4", "output.mp4")
     nc.slow("input.mp4", 3, "output.mp4")
 
     nc.face("input.mp4", "face.png", "output.mp4")
-    nc.body("input.mp4", "body.png", "output.mp4")
+    nc.pose("input.mp4", "pose.png", "output.mp4")
 
     pdb.set_trace()
 

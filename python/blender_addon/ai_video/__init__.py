@@ -23,6 +23,7 @@ bl_info = {
 
 from . import op
 from . import ui
+from . import nc
 
 
 def register():

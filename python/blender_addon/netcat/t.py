@@ -20,6 +20,14 @@ class VideoSMaskSettings(PropertyGroup):
         max=1.0,
     )
 
+
+# VIDEO_OT_SMask
+# VIDEO_OT_Color
+# VIDEO_OT_Clean
+# VIDEO_OT_Zoomx
+# VIDEO_OT_Slowx
+
+
 class VIDEO_OT_SMask(Operator):
     bl_idname = "video.smask"
     bl_label = "SMask"

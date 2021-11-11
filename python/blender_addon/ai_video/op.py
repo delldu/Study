@@ -19,25 +19,43 @@ from bpy.props import (
     IntProperty,
     StringProperty,
 )
+from . import app
+from . import nc
 
-
-# bpy.ops.sequencer.fades_add()
-# bpy.ops.sequencer.fades_clear()
-# bpy.context.scene.sequence_editor.active_strip.frame_final_duration -- 70
-
-# seqs = bpy.context.scene.sequence_editor.sequences
-# seqs.keys() -- ['tennis.mp4', 'Transform']
-
-# elem = strip.strip_elem_from_frame(scene.frame_current)
-
-# bpy.data.scenes['Scene'].frame_current -- 35
-# bpy.data.scenes['Scene'].frame_set(20)
-# C.scene.frame_set(C.scene.frame_current + 1)
-
-# [i.frame for i in bpy.context.scene.timeline_markers]
-
-
+# Global variables
 AI_VIDEO_CACHE_PATH = "/tmp/ai_video"
+video_todo_list = app.VideoStrips()
+ai_video_timer_duration = 2.0
+ai_video_nc = nc.NCClient('localhost', 9999)
+
+
+def ai_video_timer():
+    if video_todo_list.size() < 1:
+        return ai_video_timer_duration
+
+    print(f"ai video timer {ai_video_timer_duration}")
+    seqs = current_sequences()
+    if len(seqs) < 1:
+        return ai_video_timer_duration
+
+    names = video_todo_list.names()
+    for s in seqs:
+        if s.name not in names:
+            continue
+
+        # s.name is created ai video operator
+        if os.path.exists(s.filepath):
+            s.blend_alpha = 1.0
+            # task done, we delete it from video strips
+            video_todo_list.delete(s.name)
+        else:
+            # update progress
+            id = video_todo_list.get(s.name)
+            if id: 
+                percent = ai_video_nc.get(id)/100.0
+                s.blend_alpha = -0.2 * percent + 0.8
+
+    return ai_video_timer_duration
 
 
 def current_sequences():
@@ -65,7 +83,9 @@ def active_strip():
         return None
 
 
-def active_image():
+def active_bimage():
+    '''Find bundling image'''
+
     images = image_sequences()
     if len(images) < 1:
         return None
@@ -87,8 +107,9 @@ def active_image():
 
 def active_bbox():
     """
-    grease pencils is global share under VSE
-    current implement only supoort one box
+    Bundling box
+    1) Grease pencils is global under VSE
+    2) Current implement only supoort one box
     """
     try:
         h = bpy.data.scenes["Scene"].render.resolution_y
@@ -101,12 +122,14 @@ def active_bbox():
                     continue
                 xset = [0.5 + p.co.x / w for p in s.points]
                 yset = [0.5 - p.co.y / h for p in s.points]
+                # box big enough ?
+                if max(xset) - min(xset) < 0.01 or max(yset) - min(yset) < 0.01:
+                    continue
                 # box = [frame_number, x1, x2, y1, y2]
-                return [f.frame_number, min(xset), max(xset), min(yset), max(yset)]
+                return {'nframe': f.frame_number, 'x1': min(xset), 'x2': max(xset), 'y1': min(yset), 'y2': max(yset)}
     except:
         pass
     return None
-
 
 def aviable_channel():
     channel = 0
@@ -115,66 +138,32 @@ def aviable_channel():
         channel = max(s.channel, channel)
     return channel + 1
 
+def create_bstrip(a, prefix):
+    '''
+    Create bundling strip, a means activte_strip
+    '''
+    try:
+        seqs = current_sequences()
+        if len(seqs) < 1:
+            return None
 
-class VideoStrips(object):
-    """Todo List: data[s.name] = id"""
-
-    def __init__(self):
-        self.data = {}
-
-    def put(self, name, id):
-        self.data[name] = id
-        print("video Todo List:", self.data)
-
-    def get(self, name):
-        return self.data.get(name, None)
-
-    def delete(self, name):
-        try:
-            del self.data[name]
-        except:
-            pass
-
-    def size(self):
-        return len(self.data)
-
-    def names(self):
-        return [e for e in self.data.keys()]
-
-
-video_todo_list = VideoStrips()
-
-
-def ai_video_timer():
-    timer_duration = 2.0
-    global video_todo_list
-
-    print(f"ai video timer {timer_duration}")
-    if video_todo_list.size() < 1:
-        return timer_duration
-
-    seqs = current_sequences()
-    if len(seqs) < 1:
-        return timer_duration
-
-    names = video_todo_list.names()
-    for s in seqs:
-        if s.name not in names:
-            continue
-
-        # s.name is created ai video operator
-        if os.path.exists(s.filepath):
+        name = prefix + "_" + os.path.basename(a.filepath)
+        s = seqs.get(name, None)
+        if s is None:
+            # protype: new_movie(name, filepath, channel, frame_start)
+            s = seqs.new_movie(
+                name,
+                f"{AI_VIDEO_CACHE_PATH}/{name}",
+                channel=aviable_channel(),
+                frame_start=a.frame_start,
+            )
+            s.frame_start = a.frame_start
+            s.frame_final_duration = a.frame_duration
             s.blend_alpha = 1.0
-            # task done, we delete it from video strips
-            video_todo_list.delete(s.name)
-        else:
-            id = video_todo_list.get(s.name)
-            if id:
-                print("video task id: ", id)
-                task_done_percent = 0.50
-                s.blend_alpha = -0.2 * task_done_percent + 0.8
-
-    return timer_duration
+            return s
+    except:
+        pass
+    return None
 
 
 class AIVideoOperator(Operator):
@@ -184,35 +173,15 @@ class AIVideoOperator(Operator):
 
     @classmethod
     def poll(cls, context):
-        strip = active_strip()
-        return strip and strip.type == "MOVIE"
+        a = active_strip()
+        return a and a.type == "MOVIE"
 
-    def create_strip(self, name):
-        try:
-            a = active_strip()
-            # a.frame_start, a.frame_duration
-            seqs = current_sequences()
-            name = name + "_" + os.path.basename(a.filepath)
-            s = seqs.get(name, None)
-            if s is None:
-                # new_movie(name, filepath, channel, frame_start)
-                s = seqs.new_movie(
-                    name,
-                    f"{AI_VIDEO_CACHE_PATH}/{name}",
-                    channel=aviable_channel(),
-                    frame_start=a.frame_start,
-                )
-                s.frame_start = a.frame_start
-                s.frame_final_duration = a.frame_duration
-                s.blend_alpha = 1.0
-                new_movie = True
-            else:
-                new_movie = False
-        except:
-            return None, None, False
+    def warning(self, message):
+        self.report({"WARNING"}, message)
 
-        return s, a, new_movie
-
+    def setup_task(self, name, cmd):
+        ai_video_nc.put(cmd)
+        video_todo_list.put(name, nc.nc_id(cmd))    
 
 class AI_Video_OT_Scene(AIVideoOperator):
     """Auto cut scenes"""
@@ -221,14 +190,19 @@ class AI_Video_OT_Scene(AIVideoOperator):
     bl_label = "Scene"
 
     def execute(self, context):
-        # scene = context.scene
-        # cursor = scene.cursor.location
-        # obj = context.active_object
+        a = active_strip()
+        # a is valid for poll method
+
+        s = create_bstrip(a, "scene")
+        if s is None:
+            self.warning("Scene task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.scene(a.filepath, s.filepath)
+        self.setup_task(s.name, cmd)
 
         return {"FINISHED"}
 
-    def invoke(self, context, event):
-        return context.window_manager.invoke_confirm(self, event)
 
 
 class AI_Video_OT_Clean(AIVideoOperator):
@@ -246,18 +220,21 @@ class AI_Video_OT_Clean(AIVideoOperator):
     )
 
     def execute(self, context):
-        # scene = context.scene
-        # cursor = scene.cursor.location
-        # obj = context.active_object
-        s, a, new_movie = self.create_strip("clean")
-        if new_movie and s and a:
-            cmd = f"clean(infile={a.filepath},sigma=30,outfile={s.filepath})"
-            video_todo_list.put(s.name, "xxxx_id")
+        a = active_strip()
+        # a is valid for poll method
+
+        s = create_bstrip(a, "clean")
+        if s is None:
+            self.warning("Clean task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.clean(a.filepath, self.sigma, s.filepath)
+        self.setup_task(s.name, cmd)
 
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width=480)
+        return context.window_manager.invoke_props_dialog(self, width=256)
 
 
 class AI_Video_OT_Color(AIVideoOperator):
@@ -267,12 +244,21 @@ class AI_Video_OT_Color(AIVideoOperator):
     bl_label = "Color"
 
     def execute(self, context):
-        reference_image = active_image()
-        if reference_image is None:
-            self.report({"WARNING"}, "NO image for reference." "Operation Cancelled")
+        color_image = active_bimage()
+        if color_image is None:
+            self.warning("NO color image for reference")
             return {"CANCELLED"}
 
-        self.create_strip("color")
+        a = active_strip()
+        # a is valid for poll method
+        s = create_bstrip(a, "color")
+        if s is None:
+            self.warning("Color task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.color(a.filepath, color_image.filepath, s.filepath)
+        self.setup_task(s.name, cmd)
+
         return {"FINISHED"}
 
 
@@ -283,10 +269,17 @@ class AI_Video_OT_Light(AIVideoOperator):
     bl_label = "Light"
 
     def execute(self, context):
-        self.create_strip("light")
+        a = active_strip()
+        # a is valid for poll method
+        s = create_bstrip(a, "light")
+        if s is None:
+            self.warning("Light task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.light(a.filepath, s.filepath)
+        self.setup_task(s.name, cmd)
 
         return {"FINISHED"}
-
 
 class AI_Video_OT_Smooth(AIVideoOperator):
     """Video smooth"""
@@ -295,7 +288,17 @@ class AI_Video_OT_Smooth(AIVideoOperator):
     bl_label = "Smooth"
 
     def execute(self, context):
-        self.create_strip("smooth")
+        a = active_strip()
+        # a is valid for poll method
+
+        s = create_bstrip(a, "smooth")
+        if s is None:
+            self.warning("Smooth task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.smooth(a.filepath, s.filepath)
+        self.setup_task(s.name, cmd)
+
         return {"FINISHED"}
 
 
@@ -306,16 +309,21 @@ class AI_Video_OT_SMask(AIVideoOperator):
     bl_label = "SMask"
 
     def execute(self, context):
-        box = active_bbox()
-        if box is None:
-            self.report(
-                {"WARNING"},
-                "NO annotation or less points (< 4) for boundling box."
-                "Operation Cancelled",
-            )
+        bbox = active_bbox()
+        if bbox is None:
+            self.warning("NO annotation or less points (< 4) for bbox")
             return {"CANCELLED"}
-        print("bbox == ", bbox)
-        self.create_strip("smask")
+        #print("bbox == ", bbox)
+
+        a = active_strip()
+        # a is valid for poll method
+        s = create_bstrip(a, "smask")
+        if s is None:
+            self.warning("SMask task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.smask(a.filepath, bbox['nframe'], bbox['x1'], bbox['x2'], bbox['y1'], bbox['y2'], s.filepath)
+        self.setup_task(s.name, cmd)
 
         return {"FINISHED"}
 
@@ -327,7 +335,15 @@ class AI_Video_OT_PMask(AIVideoOperator):
     bl_label = "PMask"
 
     def execute(self, context):
-        self.create_strip("pmask")
+        a = active_strip()
+        # a is valid for poll method
+        s = create_bstrip(a, "pmask")
+        if s is None:
+            self.warning("PMask task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.pmask(a.filepath, s.filepath)
+        self.setup_task(s.name, cmd)
 
         return {"FINISHED"}
 
@@ -339,8 +355,15 @@ class AI_Video_OT_Patch(AIVideoOperator):
     bl_label = "Patch"
 
     def execute(self, context):
-        self.create_strip("patch")
-        return {"FINISHED"}
+        a = active_strip()
+        # a is valid for poll method
+        s = create_bstrip(a, "patch")
+        if s is None:
+            self.warning("Patch task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.patch(a.filepath, s.filepath)
+        self.setup_task(s.name, cmd)
 
 
 class AI_Video_OT_Zoom(AIVideoOperator):
@@ -350,8 +373,15 @@ class AI_Video_OT_Zoom(AIVideoOperator):
     bl_label = "Zoom"
 
     def execute(self, context):
-        self.create_strip("zoom")
-        return {"FINISHED"}
+        a = active_strip()
+        # a is valid for poll method
+        s = create_bstrip(a, "zoom")
+        if s is None:
+            self.warning("Zoom task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.zoom(a.filepath, s.filepath)
+        self.setup_task(s.name, cmd)
 
 
 class AI_Video_OT_Slow(AIVideoOperator):
@@ -365,9 +395,15 @@ class AI_Video_OT_Slow(AIVideoOperator):
     )
 
     def execute(self, context):
-        self.create_strip("slow")
+        a = active_strip()
+        # a is valid for poll method
+        s = create_bstrip(a, "slow")
+        if s is None:
+            self.warning("Slow task is going on ... ?")
+            return {"CANCELLED"}
 
-        return {"FINISHED"}
+        cmd = app.VideoCommand.slow(a.filepath, self.slow, s.filepath)
+        self.setup_task(s.name, cmd)
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
@@ -380,12 +416,20 @@ class AI_Video_OT_Face(AIVideoOperator):
     bl_label = "Face"
 
     def execute(self, context):
-        face_image = active_image()
+        face_image = active_bimage()
         if face_image is None:
-            self.report({"WARNING"}, "NO face image." "Operation Cancelled")
+            self.warning("NO target face image")
             return {"CANCELLED"}
 
-        self.create_strip("face")
+        a = active_strip()
+        # a is valid for poll method
+        s = create_bstrip(a, "face")
+        if s is None:
+            self.warning("Face task is going on ... ?")
+            return {"CANCELLED"}
+
+        cmd = app.VideoCommand.face(a.filepath, face_image.filepath, s.filepath)
+        self.setup_task(s.name, cmd)
 
         return {"FINISHED"}
 
@@ -397,14 +441,20 @@ class AI_Video_OT_Pose(AIVideoOperator):
     bl_label = "Pose"
 
     def execute(self, context):
-        face_image = active_image()
-        if face_image is None:
-            self.report({"WARNING"}, "NO pose image." "Operation Cancelled")
+        pose_image = active_bimage()
+        if pose_image is None:
+            self.warning("NO target pose image")
             return {"CANCELLED"}
 
-        self.create_strip("pose")
-        return {"FINISHED"}
+        a = active_strip()
+        # a is valid for poll method
+        s = create_bstrip(a, "pose")
+        if s is None:
+            self.warning("Pose task is going on ... ?")
+            return {"CANCELLED"}
 
+        cmd = app.VideoCommand.pose(a.filepath, pose_image.filepath, s.filepath)
+        self.setup_task(s.name, cmd)
 
 classes = (
     AI_Video_OT_Scene,
@@ -444,3 +494,5 @@ def register():
 def unregister():
     ai_video_unregister()
     bpy.app.timers.unregister(ai_video_timer)
+
+    ai_video_nc.close()
