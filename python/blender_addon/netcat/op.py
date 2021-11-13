@@ -29,6 +29,33 @@ from bpy.utils import register_classes_factory
 # [i.frame for i in bpy.context.scene.timeline_markers]
 
 
+# import bpy
+# from os.path import join
+
+# S = bpy.context.scene
+# n = S.node_tree
+
+# vidNode = n.nodes['Movie Clip']
+
+# # Set Render Settings dimensions according to video
+# S.render.resolution_percentage = 100
+# S.render.resolution_y          = vidNode.clip.size[1]
+# S.render.resolution_x          = vidNode.clip.size[0]
+
+# # Render desired frame numbers ( UPDATE THESE AS NEEDED )
+# start = 5
+# end   = 200
+# step  = 3
+# frame_numbers = range(start, end, step)
+
+# outputFolder = "C:/tmp/test"    # <=== Update this 
+# for f in frame_numbers:
+#     S.frame_set( f )
+#     fileName = str(f) + S.render.file_extension
+#     S.render.filepath = join( outputFolder, fileName )
+#     bpy.ops.render.render( write_still = True )
+
+
 def render(self, context):
     scene = context.scene
     render = scene.render

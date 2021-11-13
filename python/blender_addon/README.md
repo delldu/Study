@@ -1,5 +1,9 @@
 ## 1. Install
 ```pip install pynng
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+https://github.com/tin2tin/shot_detection
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 pip install pynng
 
 # Install pynng to blender 2.93 ?
@@ -22,6 +26,10 @@ drwxr-xr-x 2 dell dell 4.0K 10月 19 16:28 __pycache__
 
 pkgutil
 list(pkgutil.iter_modules())
+
+
+https://github.com/tin2tin/shot_detection
+https://github.com/amb/blender_pip/blob/master/__init__.py
 
 ```
 ## 2. Server
@@ -562,6 +570,8 @@ dir(f) -- ['frame_number','strokes']
 bpy.data.movieclips['noise.mp4'].grease_pencil
 # -- bpy.data.grease_pencils['cbox']
 
+
+
 ```
 
 ### Tracker
@@ -803,6 +813,11 @@ def every_2_seconds():
 bpy.app.timers.register(every_2_seconds)
 https://docs.blender.org/api/current/bpy.app.timers.html
 https://github.com/snuq/VSEQF
+
+
+https://blender.stackexchange.com/questions/95722/how-to-detect-scene-strips-in-the-vse-on-frame-changes
+
+https://zwolf12.medium.com/video-scene-detection-and-classification-pyscenedetect-places365-and-mozilla-deepspeech-engine-51338e3dbacc
 
 ```
 
