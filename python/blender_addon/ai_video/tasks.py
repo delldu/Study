@@ -28,13 +28,14 @@ def task_id(value):
 
 
 def print_redis_error(e):
-    print("redis error:", e, "Redis server start OK ?")
+    print("Redis running error:", e)
+    print("Redis server start OK ?")
     print("Reference command:")
     print("    sudo service redis-server start/stop/restart/status")
 
 
 def print_json_error(s):
-    print("json parse error: s = ", s)
+    print(f"Json parse '{s}' error: ")
 
 
 class RedisTasks(object):
@@ -233,8 +234,8 @@ class RedisTasks(object):
             return False
 
 
-tasks = RedisTasks("video")
-tasks.set_task("color(infile=a.mp4, color_picture=color.png, outfile=o.mp4)")
-print(tasks)
+video = RedisTasks("video")
+video.set_task("color(infile=a.mp4, color_picture=color.png, outfile=o.mp4)")
+print(video)
 
 pdb.set_trace()
