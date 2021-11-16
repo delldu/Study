@@ -16,12 +16,12 @@
 import argparse
 import pdb
 import time
-
 from nc import nc_id, NCClient, NCServer
 from app import VideoCommand
+
+import re
 import subprocess as sp
 import numpy as np
-
 
 # Good reference
 # https://github.com/Zulko/moviepy.git
@@ -40,8 +40,6 @@ class VideoReader(object):
         """
         ffmpeg -i tennis.mp4 -f null -
         """
-        import re
-
         self.n_frames = 0
         cmd = ["ffmpeg", "-i", self.filename, "-f", "null", "-"]
         try:
@@ -87,7 +85,7 @@ class VideoReader(object):
             callback = self.print_frame
 
         if start_frame > 0:
-            start_time = int(start_frame/self.n_frames)
+            start_time = int(start_frame / self.n_frames)
         else:
             start_time = 0
         start_pos = int(self.fps * start_time + 0.0001)
@@ -121,7 +119,7 @@ class VideoReader(object):
         frame_count = 0
         while start_pos < stop_frame:
             buffer = proc.stdout.read(buffer_size)
-            start_pos = start_pos + 1 # ==> current frame no is start_pos -1
+            start_pos = start_pos + 1  # ==> current frame no is start_pos -1
 
             if len(buffer) != buffer_size:
                 print(f"frame read error: data length != buffer_size")
@@ -380,4 +378,3 @@ if __name__ == "__main__":
         start_server(args.address, args.port)
     else:
         client_connect(args.address, args.port)
-
