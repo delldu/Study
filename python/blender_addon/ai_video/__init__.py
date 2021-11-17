@@ -9,6 +9,9 @@
 # ***
 # ************************************************************************************/
 #
+from . import op
+from . import ui
+# from . import nc
 
 bl_info = {
     "name": "AI Video",
@@ -20,10 +23,6 @@ bl_info = {
     "tracker_url": "",
     "category": "Sequencer",
 }
-
-from . import op
-from . import ui
-from . import nc
 
 
 def register():

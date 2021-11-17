@@ -17,7 +17,7 @@ from bpy.utils import register_classes_factory
 from bpy.props import (
     # BoolProperty,
     IntProperty,
-    StringProperty,
+    # StringProperty,
 )
 from . import app
 from . import nc
@@ -133,7 +133,7 @@ def active_bbox():
                     "y1": min(yset),
                     "y2": max(yset),
                 }
-    except:
+    except Exception:
         pass
     return None
 
@@ -169,7 +169,7 @@ def create_bstrip(a, prefix):
             s.frame_final_duration = a.frame_duration
             s.blend_alpha = 1.0
             return s
-    except:
+    except Exception:
         pass
     return None
 
@@ -220,8 +220,8 @@ class AI_Video_OT_Clean(AIVideoOperator):
     bl_label = "Clean"
 
     sigma: IntProperty(
-        name="Sigma",
-        description="The noise level",
+        name='sigma',
+        description='The noise level',
         default=25,
         min=0,
         max=100,
@@ -408,7 +408,7 @@ class AI_Video_OT_Slow(AIVideoOperator):
     bl_label = "Slow"
 
     slow: IntProperty(
-        name="Slow down", description="The slow down times", default=2, min=2, max=4
+        name="slow", description='The slow down times', default=2, min=2, max=4
     )
 
     def execute(self, context):
@@ -498,8 +498,8 @@ def create_dir(path):
             os.removedirs(path)
         if not os.path.exists(path):
             os.makedirs(path)
-    except:
-        print(f"Create directory '{path}' error.")
+    except Exception as e:
+        print(f"Create directory '{path}' error:", e)
 
 
 def register():

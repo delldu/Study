@@ -34,8 +34,8 @@ def print_redis_error(e):
     print("    sudo service redis-server start/stop/restart/status")
 
 
-def print_json_error(s):
-    print(f"Json parse '{s}' error: ")
+def print_json_error(e):
+    print("Json parse error:", e)
 
 
 class RedisTasks(object):
@@ -80,8 +80,8 @@ class RedisTasks(object):
                 s = "{}"
             try:
                 d = json.loads(s)
-            except:
-                print_json_error(s)
+            except json.decoder.JSONDecodeError:
+                # state maybe not exists, ignore is reasonable
                 d = {}
             # set default value
             if "progress" not in d:
@@ -147,8 +147,8 @@ class RedisTasks(object):
                 if d.get("id", "") == id and id == task_id(d.get("content", ""))
                 else None
             )
-        except:
-            print_json_error(s)
+        except json.decoder.JSONDecodeError as e:
+            print_json_error(e)
             return None
 
     def get_state(self, id):
@@ -162,8 +162,8 @@ class RedisTasks(object):
         try:
             d = json.loads(s)
             return float(d["progress"])
-        except:
-            # print_json_error(s), no need
+        except json.decoder.JSONDecodeError:
+            # state maybe not exists, ignore is reasonable
             return 0
 
     def set_state(self, id, progress):
@@ -234,8 +234,9 @@ class RedisTasks(object):
             return False
 
 
-video = RedisTasks("video")
-video.set_task("color(infile=a.mp4, color_picture=color.png, outfile=o.mp4)")
-print(video)
+if __name__ == "__main__":
+    video = RedisTasks("video")
+    video.set_task("color(infile=a.mp4, color_picture=color.png, outfile=o.mp4)")
+    print(video)
 
-pdb.set_trace()
+    pdb.set_trace()

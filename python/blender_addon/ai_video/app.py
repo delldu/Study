@@ -142,7 +142,7 @@ class VideoStrips(object):
     def delete(self, name):
         try:
             del self.data[name]
-        except:
+        except KeyError:
             pass
 
     def size(self):

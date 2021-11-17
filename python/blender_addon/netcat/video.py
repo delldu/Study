@@ -9,6 +9,7 @@
 # ***
 # ************************************************************************************/
 #
+import os
 import argparse
 import pdb
 import time
@@ -230,7 +231,7 @@ def start_server(HOST="localhost", PORT=9999):
     s = NCServer((HOST, PORT))
     s.max_children = 3
     s.serve_forever()
-    server.shutdown()
+    s.server.shutdown()
 
 
 def client_connect(host, port):

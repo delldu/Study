@@ -13,7 +13,7 @@
 import bpy
 from bpy.types import (
     Menu,
-    Panel,
+    # Panel,
 )
 from bpy.utils import (
     register_class,

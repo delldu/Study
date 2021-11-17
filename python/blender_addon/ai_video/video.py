@@ -12,7 +12,7 @@
 
 # THIS FILE IS ONLY FOR TEST !!!
 
-
+import os
 import argparse
 import pdb
 import time
@@ -25,6 +25,8 @@ import numpy as np
 
 # Good reference
 # https://github.com/Zulko/moviepy.git
+
+
 class VideoReader(object):
     """Use ffmpeg process video"""
 
@@ -48,7 +50,7 @@ class VideoReader(object):
             if proc.returncode != 0:
                 return
             err = err.decode(encoding="utf-8")
-        except:
+        except (OSError, ValueError):
             print(f"{cmd} error: {err}")
             return
 
@@ -112,7 +114,7 @@ class VideoReader(object):
         ]
         try:
             proc = sp.Popen(cmd, stdout=sp.PIPE, stderr=sp.PIPE, bufsize=buffer_size)
-        except:
+        except (OSError, ValueError):
             print(f"read {self.filename} frame error.")
             return 0
 
@@ -122,7 +124,7 @@ class VideoReader(object):
             start_pos = start_pos + 1  # ==> current frame no is start_pos -1
 
             if len(buffer) != buffer_size:
-                print(f"frame read error: data length != buffer_size")
+                print("frame read error: data length != buffer_size")
                 continue
 
             # skip frames ?
@@ -333,7 +335,7 @@ def start_server(HOST="localhost", PORT=9999):
     s = NCServer((HOST, PORT))
     s.max_children = 3
     s.serve_forever()
-    server.shutdown()
+    s.server.shutdown()
 
 
 def client_connect(host, port):

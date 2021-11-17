@@ -103,7 +103,7 @@ class NCTasks(object):
             pid = v["pid"]
             if isinstance(pid, int) and pid > 1:
                 os.kill(pid, signal.SIGKILL)
-        except:
+        except KeyError:
             pass
 
         qlist = []
@@ -113,7 +113,7 @@ class NCTasks(object):
         try:
             qlist.remove(key)
             del self.taskd[key]
-        except:
+        except KeyError:
             pass
 
         for e in qlist:
@@ -144,15 +144,15 @@ class NCMessage(object):
         """Decode JSON string to dict object"""
         try:
             d = json.loads(message)
-            if ("method" not in d) or (d["method"] not in NCMessage.REQUEST_METHOD):
+            if d["method"] not in NCMessage.REQUEST_METHOD:
                 return None
-            if ("content" not in d) or (not isinstance(d["content"], str)):
+            if not isinstance(d["content"], str):
                 return None
-            if ("length" not in d) or (not isinstance(d["length"], int)):
+            if not isinstance(d["length"], int):
                 return None
             if len(d["content"]) != d["length"]:
                 return None
-        except:
+        except Exception:
             return None
         return d
 
@@ -161,15 +161,15 @@ class NCMessage(object):
         """Decode JSON string to dict object"""
         try:
             d = json.loads(message)
-            if ("status" not in d) or (d["status"] not in NCMessage.RESPONSE_STATUS):
+            if d["status"] not in NCMessage.RESPONSE_STATUS:
                 return None
-            if ("content" not in d) or (not isinstance(d["content"], str)):
+            if not isinstance(d["content"], str):
                 return None
-            if ("length" not in d) or (not isinstance(d["length"], int)):
+            if not isinstance(d["length"], int):
                 return None
             if len(d["content"]) != d["length"]:
                 return None
-        except:
+        except Exception:
             return None
         return d
 
@@ -254,7 +254,7 @@ class NCHandler(socketserver.StreamRequestHandler):
                 response_message = self.handle_message(request_message)
                 self.wfile.write(response_message.encode(encoding="utf-8"))
                 return True
-        except ConnectionResetError as e:
+        except (ConnectionResetError, Exception):
             """Write error or client disconnected ..."""
             pass
         # read nothing, so close client connection ...
@@ -295,7 +295,7 @@ class NCServer(socketserver.ThreadingTCPServer):
         except ChildProcessError:
             # have not any children, we're done
             self.active_children.clear()
-        except OSError:
+        except (OSError, Exception):
             pass
 
         # clear progress queue
@@ -443,14 +443,14 @@ class NCClient(object):
                 if d and d["status"] == NCMessage.Status_OK:
                     progress = int(d["content"])
                 return progress
-            except:
+            except Exception:
                 return -1
 
         def rpc_put(content):
             d = self.rpc(NCMessage.encode_request("PUT", content))
             try:
                 return d and d["status"] == NCMessage.Status_OK
-            except:
+            except Exception:
                 return False
 
         def rpc_delete(id):
@@ -460,7 +460,7 @@ class NCClient(object):
                     NCMessage.Status_OK,
                     NCMessage.Status_NotFound,
                 )
-            except:
+            except Exception:
                 return False
 
         if not self.alive:
@@ -476,7 +476,7 @@ class NCClient(object):
                 if v and rpc_put(v["content"]):
                     # put task to remote OK, so delete it from adds
                     self.jobs.adds_delete(id)
-            except:
+            except Exception:
                 pass
 
         # 2) Delete task from remote
@@ -532,7 +532,7 @@ class NCClient(object):
             v = self.jobs.get(id)
             if v:
                 return v["progress"]
-        except:
+        except Exception:
             pass
         return 0
 
