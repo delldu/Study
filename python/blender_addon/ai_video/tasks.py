@@ -112,7 +112,7 @@ class RedisTasks(object):
             keys = []
 
         for id in keys:
-            d = self.get_value(id)
+            d = self.get_task_value(id)
             if d is None:
                 continue
             content = d.get("content", "")
@@ -137,7 +137,7 @@ class RedisTasks(object):
             )
         return "\n".join(output)
 
-    def get_value(self, id):
+    def get_task_value(self, id):
         try:
             s = self.re.get(f"{self.name}.{id}")
         except redis.RedisError as e:
@@ -155,7 +155,7 @@ class RedisTasks(object):
         except Exception:
             return None
 
-    def get_state(self, id):
+    def get_task_state(self, id):
         """General this is called by client."""
 
         try:
@@ -172,7 +172,7 @@ class RedisTasks(object):
         except Exception:
             return 0
 
-    def set_state(self, id, progress):
+    def set_task_state(self, id, progress):
         """General this is called by server worker."""
 
         s = json.dumps(
@@ -185,7 +185,7 @@ class RedisTasks(object):
             print_redis_error(e)
             return False
 
-    def first_task(self):
+    def get_first_task(self):
         """General this is called by server worker."""
 
         def get_qid():
@@ -196,10 +196,10 @@ class RedisTasks(object):
             return None
 
         id = get_qid()
-        return self.get_value(id) if id else None
+        return self.get_task_value(id) if id else None
 
 
-    def last_task(self):
+    def get_last_task(self):
         """General this is called by server worker."""
         def get_qid():
             try:
@@ -209,23 +209,10 @@ class RedisTasks(object):
             return None
 
         id = get_qid()
-        return self.get_value(id) if id else None
+        return self.get_task_value(id) if id else None
 
 
-    def find_task(self, pattern):
-        """General this is called by server worker."""
-        try:
-            keys = self.re.lrange(self.queue, 0, -1)
-            for id in keys:
-                t = self.get_value(id)
-                if t and t["content"].startswith(pattern + "("):
-                    return t
-        except redis.RedisError as e:
-            print_redis_error(e)
-        return None
-
-
-    def get_task(self):
+    def get_queue_task(self, pattern=None):
         """General this is called by server worker."""
 
         def get_qid():
@@ -235,10 +222,25 @@ class RedisTasks(object):
                 print_redis_error(e)
             return None
 
-        id = get_qid()
-        return self.get_value(id) if id else None
+        def get_pattern_id(pattern):
+            try:
+                keys = self.re.lrange(self.queue, 0, -1)
+                for id in keys:
+                    t = self.get_task_value(id)
+                    if t and t["content"].startswith(pattern + "("):
+                        self.re.lrem(self.queue, 0, id)
+                        return id
+            except redis.RedisError as e:
+                print_redis_error(e)
+            return None
 
-    def set_task(self, content):
+        if isinstance(pattern, str) and len(str) > 0:
+            id = get_pattern_id(pattern)
+        else:
+            id = get_qid()
+        return self.get_task_value(id) if id else None
+
+    def set_queue_task(self, content):
         """General this is called by client."""
 
         id = task_id(content)
@@ -264,7 +266,7 @@ class RedisTasks(object):
             print_redis_error(e)
             return False
 
-    def del_task(self, id):
+    def del_queue_task(self, id):
         """General this is called by client."""
 
         try:
@@ -282,8 +284,8 @@ class RedisTasks(object):
 
 if __name__ == "__main__":
     video = RedisTasks("video")
-    video.set_task("color(infile=a.mp4, color_picture=color.png, outfile=o.mp4)")
-    video.set_task("clean(infile=clean_input.mp4, sigma=30, outfile=clean_output.mp4)")
+    video.set_queue_task("color(infile=a.mp4, color_picture=color.png, outfile=o.mp4)")
+    video.set_queue_task("clean(infile=clean_input.mp4, sigma=30, outfile=clean_output.mp4)")
 
     # print(video)
 
