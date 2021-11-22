@@ -83,6 +83,9 @@ class RedisTasks(object):
             except json.decoder.JSONDecodeError:
                 # state maybe not exists, ignore is reasonable
                 d = {}
+            except Exception:
+                d = {}
+
             # set default value
             if "progress" not in d:
                 d["progress"] = 0
@@ -149,6 +152,7 @@ class RedisTasks(object):
             )
         except json.decoder.JSONDecodeError as e:
             print_json_error(e)
+        except Exception:
             return None
 
     def get_state(self, id):
@@ -165,6 +169,8 @@ class RedisTasks(object):
         except json.decoder.JSONDecodeError:
             # state maybe not exists, ignore is reasonable
             return 0
+        except Exception:
+            return 0
 
     def set_state(self, id, progress):
         """General this is called by server worker."""
@@ -178,6 +184,46 @@ class RedisTasks(object):
         except redis.RedisError as e:
             print_redis_error(e)
             return False
+
+    def first_task(self):
+        """General this is called by server worker."""
+
+        def get_qid():
+            try:
+                return self.re.lindex(self.queue, 0)
+            except redis.RedisError as e:
+                print_redis_error(e)
+            return None
+
+        id = get_qid()
+        return self.get_value(id) if id else None
+
+
+    def last_task(self):
+        """General this is called by server worker."""
+        def get_qid():
+            try:
+                return self.re.lindex(self.queue, -1)
+            except redis.RedisError as e:
+                print_redis_error(e)
+            return None
+
+        id = get_qid()
+        return self.get_value(id) if id else None
+
+
+    def find_task(self, pattern):
+        """General this is called by server worker."""
+        try:
+            keys = self.re.lrange(self.queue, 0, -1)
+            for id in keys:
+                t = self.get_value(id)
+                if t and t["content"].startswith(pattern + "("):
+                    return t
+        except redis.RedisError as e:
+            print_redis_error(e)
+        return None
+
 
     def get_task(self):
         """General this is called by server worker."""
@@ -237,6 +283,8 @@ class RedisTasks(object):
 if __name__ == "__main__":
     video = RedisTasks("video")
     video.set_task("color(infile=a.mp4, color_picture=color.png, outfile=o.mp4)")
-    print(video)
+    video.set_task("clean(infile=clean_input.mp4, sigma=30, outfile=clean_output.mp4)")
+
+    # print(video)
 
     pdb.set_trace()
