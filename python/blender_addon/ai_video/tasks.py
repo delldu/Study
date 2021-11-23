@@ -43,15 +43,18 @@ class RedisTasks(object):
     Redis Tasks API
 
     internal implement:
-        video.tasks -- rpush list for all sets ['00001', '00002', ... ]
-        video.queue -- rpush list for queue, ['00001', '00002'] for queue
-        video.00001 -- json string: 'id', 'content', 'create' with valid check.
-        state.00001 -- json string: 'progress', 'update', 'pid', 'status'
+        video.tasks -- rpush list for all video task ['color.00001', 'clean.00002', ... ]
+        video.queue -- rpush list for queue, ['color.00001', 'clean.00002'] for queue
+
+        video.color.00001.value -- json string: 'id', 'content', 'create' with valid check.
+        video.color.00001.state -- json string: 'progress', 'update', 'pid', 'status'
+
+        video.clean.00002.value -- json string: 'id', 'content', 'create' with valid check.
+        video.clean.00002.state -- json string: 'progress', 'update', 'pid', 'status'
     """
 
-    def __init__(self, name, reset=False):
+    def __init__(self, name):
         """name like video, image ..."""
-        assert name != "state", "state is key word in this class"
         self.name = name
 
         self.tasks = f"{self.name}.tasks"
@@ -59,22 +62,12 @@ class RedisTasks(object):
 
         self.re = redis.Redis(host="localhost", port=6379, decode_responses=True)
 
-        # reset is good for server, but not for client
-        if reset:
-            try:
-                pipe = self.re.pipeline()
-                pipe.delete(self.tasks)
-                pipe.delete(self.queue)
-                pipe.execute()
-            except redis.RedisError as e:
-                print_redis_error(e)
-
     def __repr__(self):
         """General use for debug."""
 
-        def get_default_state(id):
+        def get_default_state(key):
             try:
-                s = self.re.get(f"state.{id}")
+                s = self.re.get(f"{self.name}.{key}.state")
             except redis.RedisError as e:
                 print_redis_error(e)
                 s = "{}"
@@ -95,35 +88,46 @@ class RedisTasks(object):
                 d["pid"] = 0
             return d
 
-        outfmt = "{:32} {:64} {:8} {:8} {:8} {:8}"
+        # Start __repr__
+        outfmt = "{:32} {:72} {:8} {:8} {:8} {:8} {:8}"
         output = []
         output.append(
-            outfmt.format("task id", "content", "create", "progress", "update", "pid")
-        )
-        output.append(
-            outfmt.format("-" * 32, "-" * 64, "-" * 8, "-" * 8, "-" * 8, "-" * 8)
+            outfmt.format("id", "content", "create", "progress", "update", "pid", "flag")
         )
 
-        # output.append("-" * 128)
+        output.append(
+            outfmt.format("-" * 32, "-" * 72, "-" * 8, "-" * 8, "-" * 8, "-" * 8, "-" * 8)
+        )
+
         try:
             keys = self.re.lrange(self.tasks, 0, -1)
         except redis.RedisError as e:
             print_redis_error(e)
             keys = []
 
-        for id in keys:
-            d = self.get_task_value(id)
+        try:
+            queue_keys = self.re.lrange(self.queue, 0, -1)
+        except redis.RedisError as e:
+            print_redis_error(e)
+            queue_keys = []
+
+        # output.append("-" * 128)
+        for key in keys:
+            d = self.get_task_value(key)
             if d is None:
                 continue
+
+            id = d.get("id", "")
             content = d.get("content", "")
             create_time = d.get("create", time.time())
             create_time = time.strftime("%H:%M:%S", time.localtime(create_time))
 
-            d = get_default_state(id)
+            d = get_default_state(key)
             progress = d.get("progress")
             update_time = d.get("update")
             update_time = time.strftime("%H:%M:%S", time.localtime(update_time))
             pid = d.get("pid")
+            queue = "queue" if key in queue_keys else ""
 
             output.append(
                 outfmt.format(
@@ -133,33 +137,31 @@ class RedisTasks(object):
                     f"{progress:6.2f} %",
                     update_time,
                     str(pid),
+                    queue
                 )
             )
+
         return "\n".join(output)
 
-    def get_task_value(self, id):
+    def get_task_value(self, key):
         try:
-            s = self.re.get(f"{self.name}.{id}")
+            s = self.re.get(f"{self.name}.{key}.value")
         except redis.RedisError as e:
             print_redis_error(e)
             return None
         try:
             d = json.loads(s)
-            return (
-                d
-                if d.get("id", "") == id and id == task_id(d.get("content", ""))
-                else None
-            )
+            return d if d.get("id", "") == task_id(d.get("content", "")) else None
         except json.decoder.JSONDecodeError as e:
             print_json_error(e)
         except Exception:
             return None
 
-    def get_task_state(self, id):
+    def get_task_state(self, key):
         """General this is called by client."""
 
         try:
-            s = self.re.get(f"state.{id}")
+            s = self.re.get(f"{self.name}.{key}.state")
         except redis.RedisError as e:
             print_redis_error(e)
             return 0
@@ -172,14 +174,14 @@ class RedisTasks(object):
         except Exception:
             return 0
 
-    def set_task_state(self, id, progress):
+    def set_task_state(self, key, progress):
         """General this is called by server worker."""
 
         s = json.dumps(
             {"update": time.time(), "progress": progress, "pid": os.getpid()}
         )
         try:
-            self.re.set(f"state.{id}", s)
+            self.re.set(f"{self.name}.{key}.state", s)
             return True
         except redis.RedisError as e:
             print_redis_error(e)
@@ -188,76 +190,77 @@ class RedisTasks(object):
     def get_first_task(self):
         """General this is called by server worker."""
 
-        def get_qid():
+        def get_qkey():
             try:
                 return self.re.lindex(self.queue, 0)
             except redis.RedisError as e:
                 print_redis_error(e)
             return None
 
-        id = get_qid()
-        return self.get_task_value(id) if id else None
+        key = get_qkey()
+        return self.get_task_value(key) if key else None
 
 
     def get_last_task(self):
         """General this is called by server worker."""
-        def get_qid():
+        def get_qkey():
             try:
                 return self.re.lindex(self.queue, -1)
             except redis.RedisError as e:
                 print_redis_error(e)
             return None
 
-        id = get_qid()
-        return self.get_task_value(id) if id else None
+        key = get_qkey()
+        return self.get_task_value(key) if key else None
 
 
     def get_queue_task(self, pattern=None):
         """General this is called by server worker."""
 
-        def get_qid():
+        def get_qkey():
             try:
                 return self.re.lpop(self.queue)
             except redis.RedisError as e:
                 print_redis_error(e)
             return None
 
-        def get_pattern_id(pattern):
+        def get_pattern_qkey(pattern):
             try:
                 keys = self.re.lrange(self.queue, 0, -1)
-                for id in keys:
-                    t = self.get_task_value(id)
-                    if t and t["content"].startswith(pattern + "("):
-                        self.re.lrem(self.queue, 0, id)
-                        return id
+                for key in keys:
+                    if key.startswith(pattern + "("):
+                        self.re.lrem(self.queue, 0, key)
+                        return key
             except redis.RedisError as e:
                 print_redis_error(e)
             return None
 
         if isinstance(pattern, str) and len(str) > 0:
-            id = get_pattern_id(pattern)
+            key = get_pattern_qkey(pattern)
         else:
-            id = get_qid()
-        return self.get_task_value(id) if id else None
+            key = get_qkey()
+        return self.get_task_value(key) if key else None
 
     def set_queue_task(self, content):
         """General this is called by client."""
 
         id = task_id(content)
         task = {"id": id, "content": content, "create": time.time()}
+        prefix = content[0 : content.find('(')]
+        key = f"{prefix}.{id}"
         try:
             pipe = self.re.pipeline()
 
             # force delete id from video.queue/tasks
-            pipe.lrem(self.tasks, 0, id)
-            pipe.lrem(self.queue, 0, id)
+            pipe.lrem(self.tasks, 0, key)
+            pipe.lrem(self.queue, 0, key)
 
             # push id to tail of queue/tasks
-            pipe.rpush(self.tasks, id)
-            pipe.rpush(self.queue, id)
+            pipe.rpush(self.tasks, key)
+            pipe.rpush(self.queue, key)
 
             # set id/content/create
-            pipe.set(f"{self.name}.{id}", json.dumps(task))
+            pipe.set(f"{self.name}.{key}.value", json.dumps(task))
 
             pipe.execute()
 
@@ -266,15 +269,15 @@ class RedisTasks(object):
             print_redis_error(e)
             return False
 
-    def del_queue_task(self, id):
+    def del_queue_task(self, key):
         """General this is called by client."""
 
         try:
             pipe = self.re.pipeline()
-            pipe.lrem(self.tasks, 0, id)
-            pipe.lrem(self.queue, 0, id)
-            pipe.delete(f"{self.name}.{id}")
-            pipe.delete(f"state.{id}")
+            pipe.lrem(self.tasks, 0, key)
+            pipe.lrem(self.queue, 0, key)
+            pipe.delete(f"{self.name}.{key}.value")
+            pipe.delete(f"{self.name}.{key}.state")
             pipe.execute()
             return True
         except redis.RedisError as e:
