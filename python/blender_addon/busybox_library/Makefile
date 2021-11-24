@@ -9,7 +9,6 @@
 
 XSUBDIRS :=  \
 	hiredis \
-	cJSON \
 	libtasks
 
 

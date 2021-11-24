@@ -6,8 +6,8 @@
 ***
 ************************************************************************************/
 
-#ifndef _TASKS_H
-#define _TASKS_H
+#ifndef _TASKSET_H
+#define _TASKSET_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -18,7 +18,7 @@ extern "C" {
 #define RET_OK 0
 #define RET_ERROR (-1)
 
-#define TASKS_VERSION "1.0.0"
+#define TASKSET_VERSION "1.0.0"
 #define MAX_TASK_CONTENT_LEN 1024
 
 
@@ -38,31 +38,33 @@ extern "C" {
 	typedef struct {
 		char *name;
 		void *redis;			// data is stored on redis server
-	} TASKS;
+	} TASKSET;
 
-    char *tasks_version();
-	int get_task_id(char *content, TASKID id); // thread safety
+	char *taskset_version();
+	int get_task_id(char *content, TASKID id);	// thread safety
+	int get_task_key(char *content, char *key_buff, size_t key_size);
 
-	TASKS *tasks_create(char *name, int reset);
+	TASKSET *create_taskset(char *name);
 
 // The following not touch queue
-	int get_task_value(TASKS * tasks, TASKID id, TASK * task);
-	float get_task_state(TASKS * tasks, TASKID id);
-	int set_task_state(TASKS * tasks, TASKID id, float progress);
-	int get_first_task(TASKS * tasks, TASK * task);
-	int get_last_task(TASKS * tasks, TASK * task);
+	int get_task_value(TASKSET * tasks, char *key, TASK * task);
+	float get_task_state(TASKSET * tasks, char *key);
+	int set_task_state(TASKSET * tasks, char *key, float progress);
+	int get_first_task(TASKSET * tasks, TASK * task);
+	int get_last_task(TASKSET * tasks, TASK * task);
 
 // The following impact queue
-	int get_queue_task(TASKS * tasks, char *pattern, TASK * task);
-	int set_queue_task(TASKS * tasks, char *content);
-	int del_queue_task(TASKS * tasks, TASKID id);
+	int get_queue_task(TASKSET * tasks, char *pattern, TASK * task);
+	int set_queue_task(TASKSET * tasks, char *content);
+	int del_queue_task(TASKSET * tasks, char *key);
 
-	void tasks_destroy(TASKS * tasks);
+	void destroy_taskset(TASKSET * tasks);
 
 	int demo_image_service();
 	int demo_video_service();
+	void taskset_test();
 
 #if defined(__cplusplus)
 }
 #endif
-#endif							// _TASKS_H
+#endif							// _TASKSET_H
