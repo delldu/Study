@@ -44,7 +44,7 @@ extern "C" {
 	} TASKSET;
 
 	// typedef int (*TASKSET_HANDLER)(char *taskset_name);
-	typedef int (*TASKSET_HANDLER)(char *);
+	typedef int (*TASKSET_HANDLER) (char *);
 
 	char *taskset_version();
 	int get_task_id(char *content, TASKID id);	// thread safety
@@ -58,13 +58,13 @@ extern "C" {
 	int get_task_value(TASKSET * tasks, char *key, TASK * task);
 	float get_task_state(TASKSET * tasks, char *key);
 	int set_task_state(TASKSET * tasks, char *key, float progress);
-	int get_first_task(TASKSET * tasks, TASK * task);
-	int get_last_task(TASKSET * tasks, TASK * task);
 
-// The following impact queue
+// The following touch queue
+	int get_first_task(TASKSET * tasks, TASK * task);
 	int get_queue_task(TASKSET * tasks, char *pattern, TASK * task);
 	int set_queue_task(TASKSET * tasks, char *content);
 	int del_queue_task(TASKSET * tasks, char *key);
+	int get_queue_len(TASKSET * tasks);
 
 	void destroy_taskset(TASKSET * tasks);
 

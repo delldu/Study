@@ -451,16 +451,15 @@ int set_task_state(TASKSET * tasks, char *key, float progress)
 	return ret;
 }
 
-int get_index_task(TASKSET * tasks, int index, TASK * task)
+int get_queue_len(TASKSET * tasks)
 {
 	int ret;
 	redisReply *reply;
 
 	check_taskset(tasks);
-	reply = taskset_get_command(tasks, "LINDEX %s.queue %d", tasks->name, index);
-	ret = check_reply_type(tasks, reply, REDIS_REPLY_STRING);
-	if (ret == RET_OK)
-		ret = get_task_value(tasks, reply->str, task);
+	reply = taskset_get_command(tasks, "LLEN %s.queue", tasks->name);
+	ret = check_reply_type(tasks, reply, REDIS_REPLY_INTEGER);
+	ret = (ret == RET_OK) ? reply->integer : 0;
 	free_reply(reply);
 
 	return ret;
@@ -468,13 +467,19 @@ int get_index_task(TASKSET * tasks, int index, TASK * task)
 
 int get_first_task(TASKSET * tasks, TASK * task)
 {
-	return get_index_task(tasks, 0, task);
+    int ret;
+    redisReply *reply;
+
+    check_taskset(tasks);
+    reply = taskset_get_command(tasks, "LINDEX %s.queue 0", tasks->name);
+    ret = check_reply_type(tasks, reply, REDIS_REPLY_STRING);
+    if (ret == RET_OK)
+        ret = get_task_value(tasks, reply->str, task);
+    free_reply(reply);
+
+    return ret;
 }
 
-int get_last_task(TASKSET * tasks, TASK * task)
-{
-	return get_index_task(tasks, -1, task);
-}
 
 int get_queue_task(TASKSET * tasks, char *pattern, TASK * task)
 {
@@ -669,14 +674,12 @@ void pidset_clean()
 void taskset_service(char *taskset_name, int max_workers, TASKSET_HANDLER handle)
 {
 	pid_t pid;
-	TASK task;
 	TASKSET *taskset = create_taskset(taskset_name);
 
 	pidset_clear();
 	while (taskset) {
-		// is there empty slot in process pools ?
-		// is there task avaible ?
-		if (pidset_count() < max_workers && get_first_task(taskset, &task) == RET_OK) {
+		// is there any idle slot in pools and queue task ?
+		if (pidset_count() < max_workers && get_queue_len(taskset) > 0) {
 			// create process
 			pid = fork();
 			if (pid == -1) {
@@ -686,8 +689,7 @@ void taskset_service(char *taskset_name, int max_workers, TASKSET_HANDLER handle
 
 			if (pid == 0) {
 				exit(handle(taskset_name));
-			}
-			else {
+			} else {
 				pidset_add(pid);
 			}
 		} else {
@@ -698,7 +700,6 @@ void taskset_service(char *taskset_name, int max_workers, TASKSET_HANDLER handle
 	}
 	destroy_taskset(taskset);
 }
-
 
 int get_token(char *buf, char deli, int maxcnt, char *tv[])
 {
@@ -724,7 +725,6 @@ int get_token(char *buf, char deli, int maxcnt, char *tv[])
 	}
 	return (n + 1);
 }
-
 
 int fargs_parse(char *command, int maxargc, char *argv[])
 {
@@ -761,7 +761,7 @@ char *fargs_search(char *name, int fargc, char *fargv[])
 	return NULL;
 }
 
-int video_clean(TASKSET *video, char *key, int argc, char *argv[])
+int video_clean(TASKSET * video, char *key, int argc, char *argv[])
 {
 	int i;
 
@@ -773,17 +773,17 @@ int video_clean(TASKSET *video, char *key, int argc, char *argv[])
 		syslog_error("video_clean missing parameters.");
 		return RET_ERROR;
 	}
-
 	// load clean model
-	for (i = 0; i < 100; i+=10) {
-		set_task_state(video, key, (float)(i + 1));
-		sleep(1);
+	for (i = 0; i < 100; i++) {
+		set_task_state(video, key, (float) (i + 1));
+		if (i % 10 == 0)
+			sleep(1);
 	}
 
 	return RET_OK;
 }
 
-int video_color(TASKSET *video, char *key, int argc, char *argv[])
+int video_color(TASKSET * video, char *key, int argc, char *argv[])
 {
 	int i;
 
@@ -795,17 +795,17 @@ int video_color(TASKSET *video, char *key, int argc, char *argv[])
 		syslog_error("video_color missing parameters.");
 		return RET_ERROR;
 	}
-
 	// load color model
-	for (i = 0; i < 100; i+=10) {
-		set_task_state(video, key, (float)(i + 1));
-		sleep(1);
+	for (i = 0; i < 100; i++) {
+		set_task_state(video, key, (float) (i + 1));
+		if (i % 10 == 0)
+			sleep(1);
 	}
 
 	return RET_OK;
 }
 
-int video_slow(TASKSET *video, char *key, int argc, char *argv[])
+int video_slow(TASKSET * video, char *key, int argc, char *argv[])
 {
 	int i;
 
@@ -817,11 +817,11 @@ int video_slow(TASKSET *video, char *key, int argc, char *argv[])
 		syslog_error("video_slow missing parameters.");
 		return RET_ERROR;
 	}
-
 	// load slow model
-	for (i = 0; i < 100; i+=10) {
-		set_task_state(video, key, (float)(i + 1));
-		sleep(1);
+	for (i = 0; i < 100; i++) {
+		set_task_state(video, key, (float) (i + 1));
+		if (i % 10 == 0)
+			sleep(1);
 	}
 
 	return RET_OK;
@@ -862,7 +862,7 @@ int video_handler(char *name)
 	return ret;
 }
 
-int image_clean(TASKSET *image, char *key, int argc, char *argv[])
+int image_clean(TASKSET * image, char *key, int argc, char *argv[])
 {
 	int i;
 
@@ -874,17 +874,16 @@ int image_clean(TASKSET *image, char *key, int argc, char *argv[])
 		syslog_error("image_clean missing parameters.");
 		return RET_ERROR;
 	}
-
 	// load clean model
 	for (i = 0; i < 5; i++) {
-		set_task_state(image, key, (float)(i + 1)*20.0);
+		set_task_state(image, key, (float) (i + 1) * 20.0);
 		sleep(1);
 	}
 
 	return RET_OK;
 }
 
-int image_color(TASKSET *image, char *key, int argc, char *argv[])
+int image_color(TASKSET * image, char *key, int argc, char *argv[])
 {
 	int i;
 
@@ -896,17 +895,16 @@ int image_color(TASKSET *image, char *key, int argc, char *argv[])
 		syslog_error("image_color missing parameters.");
 		return RET_ERROR;
 	}
-
 	// load color model
 	for (i = 0; i < 5; i++) {
-		set_task_state(image, key, (float)(i + 1)*20.0);
+		set_task_state(image, key, (float) (i + 1) * 20.0);
 		sleep(1);
 	}
 
 	return RET_OK;
 }
 
-int image_zoom(TASKSET *image, char *key, int argc, char *argv[])
+int image_zoom(TASKSET * image, char *key, int argc, char *argv[])
 {
 	int i;
 
@@ -917,10 +915,9 @@ int image_zoom(TASKSET *image, char *key, int argc, char *argv[])
 		syslog_error("image_zoom missing parameters.");
 		return RET_ERROR;
 	}
-
 	// load zoom model
 	for (i = 0; i < 5; i++) {
-		set_task_state(image, key, (float)(i + 1)*20.0);
+		set_task_state(image, key, (float) (i + 1) * 20.0);
 		sleep(1);
 	}
 
@@ -938,7 +935,7 @@ int image_handler(char *name)
 	int continue_idle_times = 0;
 
 	ret = RET_ERROR;
-	pattern[0] = '\0';	// Set any at first
+	pattern[0] = '\0';			// Set empty at first for any task
 	image = create_taskset(name);
 
 	while (image) {
@@ -989,7 +986,7 @@ void demo_video_client()
 	char *slow_task = "slow(infile=c.mp4,slow_x=3,outfile=d.mp4)";
 
 	TASKSET *video = create_taskset("video");
-	if (! video) {
+	if (!video) {
 		syslog_error("create video task set");
 		return;
 	}
@@ -1015,11 +1012,10 @@ void demo_image_client()
 	char *zoom_task = "zoom(infile=c.mp4,outfile=d.mp4)";
 
 	TASKSET *image = create_taskset("image");
-	if (! image) {
+	if (!image) {
 		syslog_error("create image task set");
 		return;
 	}
-
 	// loop for test redis server start/stop
 	set_queue_task(image, clean_task);
 	set_queue_task(image, color_task);
