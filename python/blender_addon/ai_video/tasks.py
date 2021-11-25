@@ -192,6 +192,13 @@ class RedisTasks(object):
             print_redis_error(e)
             return False
 
+    def get_queue_len(self):
+        try:
+            return self.re.llen(self.queue)
+        except redis.RedisError as e:
+            print_redis_error(e)
+        return 0
+
     def get_first_task(self):
         """General this is called by server worker."""
 
@@ -204,20 +211,6 @@ class RedisTasks(object):
 
         key = get_qkey()
         return self.get_task_value(key) if key else None
-
-
-    def get_last_task(self):
-        """General this is called by server worker."""
-        def get_qkey():
-            try:
-                return self.re.lindex(self.queue, -1)
-            except redis.RedisError as e:
-                print_redis_error(e)
-            return None
-
-        key = get_qkey()
-        return self.get_task_value(key) if key else None
-
 
     def get_queue_task(self, pattern=None):
         """General this is called by server worker."""
