@@ -19,8 +19,11 @@ extern "C" {
 #define RET_ERROR (-1)
 
 #define TASKSET_VERSION "1.0.0"
-#define MAX_TASK_CONTENT_LEN 1024
+#define TASK_CONTENT_MAX_LEN 1024
 
+#define MIN(a, b) ((a) > (b) ? (b) : (a))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define ARRAY_SIZE(x) (int)(sizeof(x) / sizeof(x[0]))
 
 	typedef int64_t TIME;
 
@@ -29,7 +32,7 @@ extern "C" {
 	typedef struct {
 		TASKID id;
 		TIME create;
-		char content[MAX_TASK_CONTENT_LEN];
+		char content[TASK_CONTENT_MAX_LEN];
 		float progress;
 		TIME update;
 		int pid;
@@ -40,11 +43,16 @@ extern "C" {
 		void *redis;			// data is stored on redis server
 	} TASKSET;
 
+	// typedef int (*TASKSET_HANDLER)(char *taskset_name);
+	typedef int (*TASKSET_HANDLER)(char *);
+
 	char *taskset_version();
 	int get_task_id(char *content, TASKID id);	// thread safety
 	int get_task_key(char *content, char *key_buff, size_t key_size);
 
 	TASKSET *create_taskset(char *name);
+
+	void taskset_service(char *taskset_name, int max_workers, TASKSET_HANDLER handle);
 
 // The following not touch queue
 	int get_task_value(TASKSET * tasks, char *key, TASK * task);
@@ -60,9 +68,11 @@ extern "C" {
 
 	void destroy_taskset(TASKSET * tasks);
 
-	int demo_image_service();
-	int demo_video_service();
-	void taskset_test();
+	void demo_video_client();
+	void demo_video_server();
+
+	void demo_image_client();
+	void demo_image_server();
 
 #if defined(__cplusplus)
 }

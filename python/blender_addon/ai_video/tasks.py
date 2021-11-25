@@ -26,6 +26,11 @@ def task_id(value):
     """
     return hashlib.md5(value.encode(encoding="utf-8")).hexdigest()
 
+def task_key(content):
+    id = task_id(content)
+    prefix = content[0 : content.find('(')]
+    key = f"{prefix}.{id}"
+    return key
 
 def print_redis_error(e):
     print("Redis running error:", e)
@@ -40,7 +45,7 @@ def print_json_error(e):
 
 class RedisTasks(object):
     """
-    Redis Tasks API
+    Redis task set API
 
     internal implement:
         video.tasks -- rpush list for all video task ['color.00001', 'clean.00002', ... ]
@@ -89,14 +94,14 @@ class RedisTasks(object):
             return d
 
         # Start __repr__
-        outfmt = "{:32} {:72} {:8} {:8} {:8} {:8} {:8}"
+        outfmt = "{:32} {:72} {:8} {:8} {:8} {:8} {:5}"
         output = []
         output.append(
             outfmt.format("id", "content", "create", "progress", "update", "pid", "flag")
         )
 
         output.append(
-            outfmt.format("-" * 32, "-" * 72, "-" * 8, "-" * 8, "-" * 8, "-" * 8, "-" * 8)
+            outfmt.format("-" * 32, "-" * 72, "-" * 8, "-" * 8, "-" * 8, "-" * 8, "-" * 5)
         )
 
         try:
@@ -228,26 +233,27 @@ class RedisTasks(object):
             try:
                 keys = self.re.lrange(self.queue, 0, -1)
                 for key in keys:
-                    if key.startswith(pattern + "("):
+                    if key.startswith(pattern + "."):
                         self.re.lrem(self.queue, 0, key)
                         return key
             except redis.RedisError as e:
                 print_redis_error(e)
             return None
 
-        if isinstance(pattern, str) and len(str) > 0:
+        if isinstance(pattern, str) and len(pattern) > 0:
             key = get_pattern_qkey(pattern)
         else:
             key = get_qkey()
         return self.get_task_value(key) if key else None
 
+
     def set_queue_task(self, content):
         """General this is called by client."""
 
         id = task_id(content)
+        key = task_key(content)
         task = {"id": id, "content": content, "create": time.time()}
-        prefix = content[0 : content.find('(')]
-        key = f"{prefix}.{id}"
+
         try:
             pipe = self.re.pipeline()
 
@@ -287,8 +293,8 @@ class RedisTasks(object):
 
 if __name__ == "__main__":
     video = RedisTasks("video")
-    video.set_queue_task("color(infile=a.mp4, color_picture=color.png, outfile=o.mp4)")
-    video.set_queue_task("clean(infile=clean_input.mp4, sigma=30, outfile=clean_output.mp4)")
+    # video.set_queue_task("color(infile=a.mp4,color_picture=color.png,outfile=o.mp4)")
+    # video.set_queue_task("clean(infile=clean_input.mp4,sigma=30,outfile=clean_output.mp4)")
 
     # print(video)
 

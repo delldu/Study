@@ -8,14 +8,14 @@
 #************************************************************************************/
 #
 
-TARGET := test_tasks
+TARGET := demo
 
 SOURCE := main.c
 
 INCS	:= -I../libtasks/include
 
 	#  -I$(BUILD_DIR)/include
-LIBS	:= -static -L../libtasks -ltasks -L../hiredis -lhiredis -lanl -L../cJSON -lcjson -lcrypto
+LIBS	:= -static -L../libtasks -ltasks -L../hiredis -lhiredis -lanl -lcrypto
 	#-L$(BUILD_DIR)/lib -lstd...
 
 CFLAGS := -O2 -fPIC

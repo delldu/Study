@@ -15,8 +15,21 @@
 #include <syslog.h>				// syslog, RFC3164 ?
 #include <string.h>
 #include <openssl/md5.h>
-#include <sys/types.h>
 #include <unistd.h>
+#include <sys/wait.h>
+
+#define PIDSET_MAX_NO 1024
+
+typedef struct {
+	int count;
+	pid_t pids[PIDSET_MAX_NO];
+} PIDSET;
+
+static PIDSET __global_pid_set;
+PIDSET *pid_set()
+{
+	return &__global_pid_set;
+}
 
 // Redis Tasks API
 
@@ -138,7 +151,7 @@ int check_reply(TASKSET * tasks, redisReply * reply)
 int check_reply_type(TASKSET * tasks, redisReply * reply, int type)
 {
 	int ret = check_reply(tasks, reply);
-	return (ret == RET_OK && reply->type == type)? RET_OK:RET_ERROR;
+	return (ret == RET_OK && reply->type == type) ? RET_OK : RET_ERROR;
 }
 
 #define free_reply(reply) do { if (reply) freeReplyObject(reply); } while(0)
@@ -218,12 +231,10 @@ char *dump_task_state(float progress)
 	return string;
 }
 
-
 int load_task_value(char *string, TASK * task)
 {
 	TASKID id;
 	int status = 0;
-	size_t len = MAX_TASK_CONTENT_LEN;
 	const cJSON *idnode = NULL;
 	const cJSON *content = NULL;
 	const cJSON *create = NULL;
@@ -231,11 +242,14 @@ int load_task_value(char *string, TASK * task)
 	cJSON *root = cJSON_Parse(string);
 	if (root == NULL) {
 		const char *error_ptr = cJSON_GetErrorPtr();
-		if (error_ptr != NULL)
+		if (error_ptr != NULL) {
 			syslog_error("JSON parse %s", error_ptr);
+			syslog_debug("JSON: %s", string);
+		}
 		goto end;
 	}
 
+	memset(task, 0, sizeof(TASK));	// must
 	idnode = cJSON_GetObjectItemCaseSensitive(root, "id");
 	if (cJSON_IsString(idnode) && (idnode->valuestring != NULL)) {
 		// save task id
@@ -248,9 +262,7 @@ int load_task_value(char *string, TASK * task)
 	content = cJSON_GetObjectItemCaseSensitive(root, "content");
 	if (cJSON_IsString(content) && (content->valuestring != NULL)) {
 		// save task content
-		len = strlen(content->valuestring);
-		if (len > MAX_TASK_CONTENT_LEN - 1)
-			len = MAX_TASK_CONTENT_LEN - 1;
+		size_t len = MIN(strlen(content->valuestring), TASK_CONTENT_MAX_LEN - 1);
 		memcpy(task->content, content->valuestring, len);
 	} else {
 		syslog_error("JSON string without content");
@@ -395,8 +407,9 @@ int get_task_value(TASKSET * tasks, char *key, TASK * task)
 	check_taskset(tasks);
 	reply = taskset_get_command(tasks, "GET %s.%s.value", tasks->name, key);
 	ret = check_reply_type(tasks, reply, REDIS_REPLY_STRING);
-	if (ret == RET_OK)
+	if (ret == RET_OK) {
 		ret = load_task_value(reply->str, task);
+	}
 	free_reply(reply);
 
 	return ret;
@@ -408,7 +421,7 @@ float get_task_state(TASKSET * tasks, char *key)
 	TASK task;
 	redisReply *reply;
 
-	if (! taskset_valid(tasks))
+	if (!taskset_valid(tasks))
 		return 0.0;
 
 	// GET video.color.id.state
@@ -578,87 +591,445 @@ void destroy_taskset(TASKSET * tasks)
 	}
 }
 
-int demo_image_service()
+void pidset_clear()
 {
-	while (1) {
-		// open window ?
+	pid_set()->count = 0;
+}
+
+int pidset_count()
+{
+	return pid_set()->count;
+}
+
+void pidset_dump(char *title)
+{
+	int i;
+	PIDSET *set = pid_set();
+	printf("%s pids count = %d: ", title, pidset_count());
+	for (i = 0; i < set->count; i++) {
+		printf("%d -- %d, ", i, set->pids[i]);
+	}
+	printf("\n");
+}
+
+int pidset_find(pid_t pid)
+{
+	int i;
+	PIDSET *set = pid_set();
+	for (i = 0; i < set->count; i++) {
+		if (set->pids[i] == pid)
+			return i;
+	}
+	return -1;
+}
+
+int pidset_add(pid_t pid)
+{
+	int index;
+	PIDSET *set = pid_set();
+
+	if (pid < 2)
+		return RET_ERROR;		// pid should be > 1
+
+	index = pidset_find(pid);
+	if (index >= 0)
+		return RET_OK;			// exists
+
+	if (set->count < PIDSET_MAX_NO) {
+		set->pids[set->count] = pid;
+		set->count++;
+		return RET_OK;
+	}
+	// set full
+
+	return RET_ERROR;
+}
+
+void pidset_remove(pid_t pid)
+{
+	int index;
+	PIDSET *set = pid_set();
+
+	index = pidset_find(pid);
+	if (index >= 0) {
+		set->pids[index] = set->pids[set->count - 1];
+		set->count--;
+	}
+}
+
+void pidset_clean()
+{
+	pid_t pid;
+
+	pid = waitpid(-1, NULL, WNOHANG);
+	if (pid > 1)
+		pidset_remove(pid);
+}
+
+void taskset_service(char *taskset_name, int max_workers, TASKSET_HANDLER handle)
+{
+	pid_t pid;
+	TASK task;
+	TASKSET *taskset = create_taskset(taskset_name);
+
+	pidset_clear();
+	while (taskset) {
+		// is there empty slot in process pools ?
+		// is there task avaible ?
+		if (pidset_count() < max_workers && get_first_task(taskset, &task) == RET_OK) {
+			// create process
+			pid = fork();
+			if (pid == -1) {
+				syslog_error("fork");
+				continue;
+			}
+
+			if (pid == 0) {
+				exit(handle(taskset_name));
+			}
+			else {
+				pidset_add(pid);
+			}
+		} else {
+			// idle time, clean resource
+			pidset_clean();
+			sleep(1);
+		}
+	}
+	destroy_taskset(taskset);
+}
+
+
+int get_token(char *buf, char deli, int maxcnt, char *tv[])
+{
+	int squote = 0;
+	int dquote = 0;
+	int n = 0;
+
+	if (!buf)
+		return 0;
+	tv[n] = buf;
+	while (*buf && (n + 1) < maxcnt) {
+		if ((squote % 2) == 0 && (dquote % 2) == 0 && deli == *buf) {
+			*buf = '\0';
+			++buf;
+			while (*buf == deli)
+				++buf;
+			tv[++n] = buf;
+			squote = dquote = 0;	// new start !!!
+		}
+		squote += (*buf == '\'') ? 1 : 0;
+		dquote += (*buf == '\"') ? 1 : 0;
+		++buf;
+	}
+	return (n + 1);
+}
+
+
+int fargs_parse(char *command, int maxargc, char *argv[])
+{
+	int n;
+	char *bs, *be;
+
+	bs = strchr(command, '(');
+	be = strrchr(command, ')');
+
+	if (bs == NULL || be == NULL || bs > be) {
+		syslog_error("command does not match function pattern.");
+		return -1;
+	}
+	*bs++ = '\0';				// remove ( and move to next position
+	*be = '\0';					// remove )
+	n = get_token(bs, ',', maxargc, argv);
+
+	return n;
+}
+
+char *fargs_search(char *name, int fargc, char *fargv[])
+{
+	char *bs;
+	int i, len;
+
+	for (i = 0; i < fargc; i++) {
+		bs = strchr(fargv[i], '=');
+		if (bs == NULL)
+			continue;
+		len = (int) (bs - fargv[i]);
+		if (strncmp(fargv[i], name, len) == 0)
+			return bs + 1;		// skip =
+	}
+	return NULL;
+}
+
+int video_clean(TASKSET *video, char *key, int argc, char *argv[])
+{
+	int i;
+
+	char *infile = fargs_search("infile", argc, argv);
+	char *sigma = fargs_search("sigma", argc, argv);
+	char *outfile = fargs_search("outfile", argc, argv);
+
+	if (infile == NULL || sigma == NULL || outfile == NULL) {
+		syslog_error("video_clean missing parameters.");
+		return RET_ERROR;
+	}
+
+	// load clean model
+	for (i = 0; i < 100; i+=10) {
+		set_task_state(video, key, (float)(i + 1));
+		sleep(1);
 	}
 
 	return RET_OK;
 }
 
-int demo_video_service()
+int video_color(TASKSET *video, char *key, int argc, char *argv[])
 {
-	TASK t;
-	int pids = 0;
-	TASKSET *video = create_taskset("video");
+	int i;
 
-	while (video) {
-		// open window ?
-		if (pids < 2) {
-			// could create new process for tasks
-			if (get_queue_task(video, "", &t) == RET_OK) {
-				// we got task, create process
-				;
-			} else {
-				// NO task, clear_resource
-				;
-				// clear_resource()
-			}
+	char *infile = fargs_search("infile", argc, argv);
+	char *color_picture = fargs_search("color_picture", argc, argv);
+	char *outfile = fargs_search("outfile", argc, argv);
 
+	if (infile == NULL || color_picture == NULL || outfile == NULL) {
+		syslog_error("video_color missing parameters.");
+		return RET_ERROR;
+	}
+
+	// load color model
+	for (i = 0; i < 100; i+=10) {
+		set_task_state(video, key, (float)(i + 1));
+		sleep(1);
+	}
+
+	return RET_OK;
+}
+
+int video_slow(TASKSET *video, char *key, int argc, char *argv[])
+{
+	int i;
+
+	char *infile = fargs_search("infile", argc, argv);
+	char *slow_x = fargs_search("slow_x", argc, argv);
+	char *outfile = fargs_search("outfile", argc, argv);
+
+	if (infile == NULL || slow_x == NULL || outfile == NULL) {
+		syslog_error("video_slow missing parameters.");
+		return RET_ERROR;
+	}
+
+	// load slow model
+	for (i = 0; i < 100; i+=10) {
+		set_task_state(video, key, (float)(i + 1));
+		sleep(1);
+	}
+
+	return RET_OK;
+}
+
+
+int video_handler(char *name)
+{
+	TASK task;
+	TASKSET *video;
+	int ret, f_argc;
+	char *f_name, *f_argv[256], f_buffer[1024], key[256];
+
+	ret = RET_ERROR;
+	video = create_taskset(name);
+	if (video && get_queue_task(video, NULL, &task) == RET_OK) {
+		get_task_key(task.content, key, sizeof(key));
+
+		// save task content to buffer for parsing
+		snprintf(f_buffer, sizeof(f_buffer), "%s", task.content);
+		f_name = f_buffer;
+		f_argc = fargs_parse(f_buffer, ARRAY_SIZE(f_argv), f_argv);
+
+		CheckPoint("Running video task ... pid = %d", getpid());
+
+		if (strcmp(f_name, "clean") == 0) {
+			ret = video_clean(video, key, f_argc, f_argv);
+		} else if (strcmp(f_name, "color") == 0) {
+			ret = video_color(video, key, f_argc, f_argv);
+		} else if (strcmp(f_name, "slow") == 0) {
+			ret = video_slow(video, key, f_argc, f_argv);
 		} else {
-			// no resourece
-			;
-			// clear_resource() ...
+			syslog_error("NOT implemented video model %s", f_name);
 		}
 	}
 	destroy_taskset(video);
 
+	return ret;
+}
+
+int image_clean(TASKSET *image, char *key, int argc, char *argv[])
+{
+	int i;
+
+	char *infile = fargs_search("infile", argc, argv);
+	char *sigma = fargs_search("sigma", argc, argv);
+	char *outfile = fargs_search("outfile", argc, argv);
+
+	if (infile == NULL || sigma == NULL || outfile == NULL) {
+		syslog_error("image_clean missing parameters.");
+		return RET_ERROR;
+	}
+
+	// load clean model
+	for (i = 0; i < 5; i++) {
+		set_task_state(image, key, (float)(i + 1)*20.0);
+		sleep(1);
+	}
+
 	return RET_OK;
 }
 
-
-void taskset_test()
+int image_color(TASKSET *image, char *key, int argc, char *argv[])
 {
 	int i;
-	char key[256];
-	TASK task;
-	char *zoom_task = "zoom(infile=a.mp4, outfile=b.mp4)";
-	char *slow_task = "slow(infile=c.mp4, outfile=d.mp4)";
 
-	TASKSET *tasks = create_taskset("video");
-	if (tasks) {
-		CheckPoint("create video task set OK");
-	} else {
-		CheckPoint("create video task set error");
+	char *infile = fargs_search("infile", argc, argv);
+	char *color_picture = fargs_search("color_picture", argc, argv);
+	char *outfile = fargs_search("outfile", argc, argv);
+
+	if (infile == NULL || color_picture == NULL || outfile == NULL) {
+		syslog_error("image_color missing parameters.");
+		return RET_ERROR;
+	}
+
+	// load color model
+	for (i = 0; i < 5; i++) {
+		set_task_state(image, key, (float)(i + 1)*20.0);
+		sleep(1);
+	}
+
+	return RET_OK;
+}
+
+int image_zoom(TASKSET *image, char *key, int argc, char *argv[])
+{
+	int i;
+
+	char *infile = fargs_search("infile", argc, argv);
+	char *outfile = fargs_search("outfile", argc, argv);
+
+	if (infile == NULL || outfile == NULL) {
+		syslog_error("image_zoom missing parameters.");
+		return RET_ERROR;
+	}
+
+	// load zoom model
+	for (i = 0; i < 5; i++) {
+		set_task_state(image, key, (float)(i + 1)*20.0);
+		sleep(1);
+	}
+
+	return RET_OK;
+}
+
+int image_handler(char *name)
+{
+	TASK task;
+	TASKSET *image;
+	int ret, f_argc;
+	char *f_name, *f_argv[256], f_buffer[1024], key[256], pattern[256];
+
+	int total_running_times = 0;
+	int continue_idle_times = 0;
+
+	ret = RET_ERROR;
+	pattern[0] = '\0';	// Set any at first
+	image = create_taskset(name);
+
+	while (image) {
+		if (get_queue_task(image, pattern, &task) == RET_OK) {
+			total_running_times++;
+			continue_idle_times = 0;	// stop count
+
+			get_task_key(task.content, key, sizeof(key));
+
+			// save task content to buffer for parsing
+			snprintf(f_buffer, sizeof(f_buffer), "%s", task.content);
+			f_name = f_buffer;
+			f_argc = fargs_parse(f_buffer, ARRAY_SIZE(f_argv), f_argv);
+
+			// save pattern for next loop
+			snprintf(pattern, sizeof(pattern), "%s", f_name);
+
+			CheckPoint("Running image task ...");
+			if (strcmp(f_name, "clean") == 0) {
+				ret = image_clean(image, key, f_argc, f_argv);
+			} else if (strcmp(f_name, "color") == 0) {
+				ret = image_color(image, key, f_argc, f_argv);
+			} else if (strcmp(f_name, "zoom") == 0) {
+				ret = image_zoom(image, key, f_argc, f_argv);
+			} else {
+				syslog_error("NOT implemented image model %s", f_name);
+			}
+		} else {
+			// no task avaible
+			continue_idle_times++;
+			sleep(1);
+		}
+
+		// schedule strategy
+		if (total_running_times >= 100 || continue_idle_times >= 5)
+			break;
+	}
+	destroy_taskset(image);
+
+	return ret;
+}
+
+
+void demo_video_client()
+{
+	char *clean_task = "clean(infile=a.mp4,sigma=30,outfile=b.mp4)";
+	char *color_task = "color(infile=a.mp4,color_picture=color.png,sigma=30,outfile=b.mp4)";
+	char *slow_task = "slow(infile=c.mp4,slow_x=3,outfile=d.mp4)";
+
+	TASKSET *video = create_taskset("video");
+	if (! video) {
+		syslog_error("create video task set");
+		return;
+	}
+
+	set_queue_task(video, clean_task);
+	set_queue_task(video, color_task);
+	set_queue_task(video, slow_task);
+
+	destroy_taskset(video);
+}
+
+
+void demo_video_server()
+{
+	taskset_service("video", 2, video_handler);
+}
+
+
+void demo_image_client()
+{
+	char *clean_task = "clean(infile=a.mp4,sigma=30,outfile=b.mp4)";
+	char *color_task = "color(infile=a.mp4,color_picture=color.png,sigma=30,outfile=b.mp4)";
+	char *zoom_task = "zoom(infile=c.mp4,outfile=d.mp4)";
+
+	TASKSET *image = create_taskset("image");
+	if (! image) {
+		syslog_error("create image task set");
 		return;
 	}
 
 	// loop for test redis server start/stop
-	for (i = 0; i < 100; i++) {
-		set_queue_task(tasks, zoom_task);
-		set_queue_task(tasks, slow_task);
+	set_queue_task(image, clean_task);
+	set_queue_task(image, color_task);
+	set_queue_task(image, zoom_task);
 
-		if (get_queue_task(tasks, "", &task) == RET_OK) {
-			CheckPoint("get_queue_task: id = %s, content = %s", task.id, task.content);
-		} else {
-			CheckPoint("get_queue_task error");
-		}
+	destroy_taskset(image);
+}
 
-		if (get_queue_task(tasks, "slow", &task) == RET_OK) {
-			CheckPoint("get_queue_task(pattern=slow): id = %s, content = %s", task.id, task.content);
-		} else {
-			CheckPoint("get_queue_task error");
-		}
 
-		get_task_key(slow_task, key, sizeof(key));
-		if (get_task_value(tasks, key, &task) == RET_OK) {
-			CheckPoint("get_task_value: id = %s, content = %s", task.id, task.content);
-		} else {
-			CheckPoint("get_task_value error");
-		}
-		sleep(1);
-	}
-
-	destroy_taskset(tasks);
+void demo_image_server()
+{
+	taskset_service("image", 2, image_handler);
 }
