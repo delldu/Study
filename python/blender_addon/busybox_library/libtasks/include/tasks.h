@@ -32,40 +32,42 @@ extern "C" {
 #define CheckPoint(fmt, arg...) \
   printf("# CheckPoint: %d(%s): " fmt "\n", (int)__LINE__, __FILE__, ##arg)
 
-#if 0
-#define syslog_info(fmt, arg...)                \
-	  do {                                          \
-	    syslog(LOG_INFO | LOG_PERROR, "Info: " fmt "\n", ##arg); \
-	  } while (0)
+#ifdef DEBUG
+	#define syslog_info(fmt, arg...)                \
+		  do {                                          \
+		    fprintf(stderr, "Info: " fmt "\n", ##arg); \
+		  } while (0)
 
-#define syslog_debug(fmt, arg...)                                          \
-	  do {                                                                     \
-	    syslog(LOG_DEBUG | LOG_PERROR, "Debug: %d(%s): " fmt "\n", (int)__LINE__, __FILE__, \
-	           ##arg);                                                         \
-	  } while (0)
+	#define syslog_debug(fmt, arg...)                                          \
+		  do {                                                                     \
+		    fprintf(stderr, "Debug: %d(%s): " fmt "\n", (int)__LINE__, __FILE__, \
+		           ##arg);                                                         \
+		  } while (0)
 
-#define syslog_error(fmt, arg...)                                        \
-	  do {                                                                   \
-	    syslog(LOG_ERR | LOG_PERROR, "Error: %d(%s): " fmt "\n", (int)__LINE__, __FILE__, \
-	           ##arg);                                                       \
-	  } while (0)
+	#define syslog_error(fmt, arg...)                                        \
+		  do {                                                                   \
+		    fprintf(stderr, "Error: %d(%s): " fmt "\n", (int)__LINE__, __FILE__, \
+		           ##arg);                                                       \
+		  } while (0)
+
+
 #else
-#define syslog_info(fmt, arg...)                \
-	  do {                                          \
-	    fprintf(stderr, "Info: " fmt "\n", ##arg); \
-	  } while (0)
+	#define syslog_info(fmt, arg...)                \
+		  do {                                          \
+		    syslog(LOG_INFO, "Info: " fmt "\n", ##arg); \
+		  } while (0)
 
-#define syslog_debug(fmt, arg...)                                          \
-	  do {                                                                     \
-	    fprintf(stderr, "Debug: %d(%s): " fmt "\n", (int)__LINE__, __FILE__, \
-	           ##arg);                                                         \
-	  } while (0)
+	#define syslog_debug(fmt, arg...)                                          \
+		  do {                                                                     \
+		    syslog(LOG_DEBUG, "Debug: %d(%s): " fmt "\n", (int)__LINE__, __FILE__, \
+		           ##arg);                                                         \
+		  } while (0)
 
-#define syslog_error(fmt, arg...)                                        \
-	  do {                                                                   \
-	    fprintf(stderr, "Error: %d(%s): " fmt "\n", (int)__LINE__, __FILE__, \
-	           ##arg);                                                       \
-	  } while (0)
+	#define syslog_error(fmt, arg...)                                        \
+		  do {                                                                   \
+		    syslog(LOG_ERR, "Error: %d(%s): " fmt "\n", (int)__LINE__, __FILE__, \
+		           ##arg);                                                       \
+		  } while (0)
 #endif
 
 	typedef int64_t TIME;
