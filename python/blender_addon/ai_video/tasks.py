@@ -68,7 +68,7 @@ class RedisTasks(object):
         self.re = redis.Redis(host="localhost", port=6379, decode_responses=True)
 
     def __repr__(self):
-        """General use for debug."""
+        """General used for debug."""
 
         def get_default_state(key):
             try:
@@ -139,7 +139,7 @@ class RedisTasks(object):
                     id,
                     content,
                     create_time,
-                    f"{progress:6.2f} %",
+                    f"{progress:6.1f} %",
                     update_time,
                     str(pid),
                     queue
@@ -163,7 +163,7 @@ class RedisTasks(object):
             return None
 
     def get_task_state(self, key):
-        """General this is called by client."""
+        """General called by client."""
 
         try:
             s = self.re.get(f"{self.name}.{key}.state")
@@ -180,7 +180,7 @@ class RedisTasks(object):
             return 0
 
     def set_task_state(self, key, progress):
-        """General this is called by server worker."""
+        """General called by server worker."""
 
         s = json.dumps(
             {"update": time.time(), "progress": progress, "pid": os.getpid()}
@@ -199,21 +199,17 @@ class RedisTasks(object):
             print_redis_error(e)
         return 0
 
-    def get_first_task(self):
+    def get_first_qkey(self):
         """General this is called by server worker."""
+        try:
+            return self.re.lindex(self.queue, 0)
+        except redis.RedisError as e:
+            print_redis_error(e)
+        return None
 
-        def get_qkey():
-            try:
-                return self.re.lindex(self.queue, 0)
-            except redis.RedisError as e:
-                print_redis_error(e)
-            return None
-
-        key = get_qkey()
-        return self.get_task_value(key) if key else None
 
     def get_queue_task(self, pattern=None):
-        """General this is called by server worker."""
+        """General called by server worker."""
 
         def get_qkey():
             try:
@@ -241,7 +237,7 @@ class RedisTasks(object):
 
 
     def set_queue_task(self, content):
-        """General this is called by client."""
+        """General called by client."""
 
         id = task_id(content)
         key = task_key(content)
@@ -268,8 +264,8 @@ class RedisTasks(object):
             print_redis_error(e)
             return False
 
-    def del_queue_task(self, key):
-        """General this is called by client."""
+    def delete_task(self, key):
+        """General called by client."""
 
         try:
             pipe = self.re.pipeline()
@@ -283,6 +279,22 @@ class RedisTasks(object):
             print_redis_error(e)
             return False
 
+    def taskset_clear(self):
+        """General called by client."""
+        try:
+            keys = self.re.lrange(self.queue, 0, -1)
+            for key in keys:
+                self.delete_task(key);
+        except redis.RedisError as e:
+            print_redis_error(e)
+
+        try:
+            keys = self.re.lrange(self.tasks, 0, -1)
+            for key in keys:
+                self.delete_task(key);
+        except redis.RedisError as e:
+            print_redis_error(e)
+
 
 if __name__ == "__main__":
     video = RedisTasks("video")
@@ -290,5 +302,6 @@ if __name__ == "__main__":
     # video.set_queue_task("clean(infile=clean_input.mp4,sigma=30,outfile=clean_output.mp4)")
 
     # print(video)
+    image = RedisTasks("image")
 
     pdb.set_trace()
