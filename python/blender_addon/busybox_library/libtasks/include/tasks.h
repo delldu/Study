@@ -90,8 +90,12 @@ extern "C" {
 
 	// typedef int (*TASKSET_HANDLER)(char *tasks_name);
 	typedef int (*TASKSET_HANDLER) (char *);
+	// typedef int (*TASK_DONE_CALLBACK)(char *qkey, char *output_file);
+	typedef int (*TASK_DONE_CALLBACK)(char *, char *);
 
 	char *taskset_version();
+	int file_exists(char *filename);
+
 	int get_task_id(char *content, TASKID id);	// thread safety
 	int get_task_key(char *content, char *key_buff, size_t key_size);
 
@@ -102,12 +106,14 @@ extern "C" {
 	int get_task_value(TASKSET * tasks, char *key, TASK * task);
 	float get_task_state(TASKSET * tasks, char *key);
 	int set_task_state(TASKSET * tasks, char *key, float progress);
+	int wait_task_done(TASKSET * tasks, char *key, int timeout, TASK_DONE_CALLBACK callback); // timeout is ms
 
 	// The following touch queue
 	int get_first_qkey(TASKSET * tasks, char *key_buff, size_t key_size);
 	int get_queue_len(TASKSET * tasks);
 	int get_queue_task(TASKSET * tasks, char *pattern, TASK * task);
 	int set_queue_task(TASKSET * tasks, char *content);
+
 
 	int delete_task(TASKSET * tasks, char *key);
 	// delete all tasks

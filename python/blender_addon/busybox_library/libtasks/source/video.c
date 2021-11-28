@@ -12,15 +12,19 @@ int video_clean(TASKSET * video, char *key, int argc, char *argv[])
 {
 	int i;
 
-	char *infile = fargs_search("infile", argc, argv);
+	char *input_file = fargs_search("input_file", argc, argv);
 	char *sigma = fargs_search("sigma", argc, argv);
-	char *outfile = fargs_search("outfile", argc, argv);
+	char *output_file = fargs_search("output_file", argc, argv);
 
-	if (infile == NULL || sigma == NULL || outfile == NULL) {
+	if (! file_exists(input_file))
+		return RET_ERROR;
+
+	if (sigma == NULL || output_file == NULL) {
 		syslog_error("video clean task miss parameters.");
 		set_task_state(video, key, -100.0);
 		return RET_ERROR;
 	}
+
 	// load clean model
 	for (i = 0; i < 100; i++) {
 		set_task_state(video, key, (float) (i + 1));
@@ -35,11 +39,14 @@ int video_color(TASKSET * video, char *key, int argc, char *argv[])
 {
 	int i;
 
-	char *infile = fargs_search("infile", argc, argv);
+	char *input_file = fargs_search("input_file", argc, argv);
 	char *color_picture = fargs_search("color_picture", argc, argv);
-	char *outfile = fargs_search("outfile", argc, argv);
+	char *output_file = fargs_search("output_file", argc, argv);
 
-	if (infile == NULL || color_picture == NULL || outfile == NULL) {
+	if (! file_exists(input_file))
+		return RET_ERROR;
+
+	if (color_picture == NULL || output_file == NULL) {
 		syslog_error("video color task miss parameters.");
 		set_task_state(video, key, -100.0);
 		return RET_ERROR;
@@ -58,11 +65,14 @@ int video_slow(TASKSET * video, char *key, int argc, char *argv[])
 {
 	int i;
 
-	char *infile = fargs_search("infile", argc, argv);
+	char *input_file = fargs_search("input_file", argc, argv);
 	char *slow_x = fargs_search("slow_x", argc, argv);
-	char *outfile = fargs_search("outfile", argc, argv);
+	char *output_file = fargs_search("output_file", argc, argv);
 
-	if (infile == NULL || slow_x == NULL || outfile == NULL) {
+	if (! file_exists(input_file))
+		return RET_ERROR;
+
+	if (slow_x == NULL || output_file == NULL) {
 		syslog_error("video slow task miss parameters.");
 		set_task_state(video, key, -100.0);
 		return RET_ERROR;
@@ -137,16 +147,16 @@ void video_client()
 
 	// loop for test redis server start/stop
 	for (i = 1; i < 10; i++) {
-		snprintf(command, sizeof(command), "clean(infile=i_%d.mp4,sigma=30,outfile=o_%d.mp4)", i, i);
+		snprintf(command, sizeof(command), "clean(input_file=i_%d.mp4,sigma=30,output_file=o_%d.mp4)", i, i);
 		set_queue_task(video, command);
 
-		snprintf(command, sizeof(command), "color(infile=i_%d.mp4,color_picture=color.png,outfile=o_%d.mp4)", i, i);
+		snprintf(command, sizeof(command), "color(input_file=i_%d.mp4,color_picture=color.png,output_file=o_%d.mp4)", i, i);
 		set_queue_task(video, command);
 
-		snprintf(command, sizeof(command), "slow(infile=i_%d.mp4,slow_x=3,outfile=o_%d.mp4)", i, i);
+		snprintf(command, sizeof(command), "slow(input_file=i_%d.mp4,slow_x=3,output_file=o_%d.mp4)", i, i);
 		set_queue_task(video, command);
 
-		snprintf(command, sizeof(command), "zoom(infile=i_%d.mp4,outfile=o_%d.mp4)", i, i);
+		snprintf(command, sizeof(command), "zoom(input_file=i_%d.mp4,output_file=o_%d.mp4)", i, i);
 		set_queue_task(video, command);
 	}
 

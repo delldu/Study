@@ -21,7 +21,7 @@ int image_clean(TASKSET * image)
 	int total_running_times = 0;
 	int continue_idle_times = 0;
 
-	char *infile, *sigma, *outfile;
+	char *input_file, *sigma, *output_file;
 
 	// load clean model
 
@@ -45,11 +45,16 @@ int image_clean(TASKSET * image)
 				continue;
 			}
 
-			infile = fargs_search("infile", f_argc, f_argv);
+			input_file = fargs_search("input_file", f_argc, f_argv);
 			sigma = fargs_search("sigma", f_argc, f_argv);
-			outfile = fargs_search("outfile", f_argc, f_argv);
+			output_file = fargs_search("output_file", f_argc, f_argv);
 
-			if (infile == NULL || sigma == NULL || outfile == NULL) {
+			if (! file_exists(input_file)) {
+				ret = RET_ERROR;
+				continue;
+			}
+
+			if (sigma == NULL || output_file == NULL) {
 				syslog_error("image clean task miss parameters.");
                 set_task_state(image, key, -100.0);
 
@@ -129,13 +134,13 @@ void image_client()
 
 	// loop for test redis server start/stop
 	for (i = 1; i < 10; i++) {
-		snprintf(command, sizeof(command), "clean(infile=i_%d.mp4,sigma=30,outfile=o_%d.mp4)", i, i);
+		snprintf(command, sizeof(command), "clean(input_file=i_%d.mp4,sigma=30,output_file=o_%d.mp4)", i, i);
 		set_queue_task(image, command);
 
-		snprintf(command, sizeof(command), "color(infile=i_%d.mp4,color_picture=color.png,outfile=o_%d.mp4)", i, i);
+		snprintf(command, sizeof(command), "color(input_file=i_%d.mp4,color_picture=color.png,output_file=o_%d.mp4)", i, i);
 		set_queue_task(image, command);
 
-		snprintf(command, sizeof(command), "zoom(infile=i_%d.mp4,outfile=o_%d.mp4)", i, i);
+		snprintf(command, sizeof(command), "zoom(input_file=i_%d.mp4,output_file=o_%d.mp4)", i, i);
 		set_queue_task(image, command);
 	}
 

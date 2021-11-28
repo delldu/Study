@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <openssl/md5.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/inotify.h>
 
 #define PIDSET_MAX_NO 1024
 
@@ -54,6 +56,20 @@ TIME time_now()
 	ms = t.tv_sec * 1000 + t.tv_usec / 1000;
 
 	return ms;
+}
+
+int file_exists(char *filename)
+{
+	struct stat s;
+	if (!filename) {
+		syslog_error("file name is null");
+		return 0;
+	}
+	if (stat(filename, &s) != 0 || !S_ISREG(s.st_mode)) {
+		syslog_error("file '%s' not exists.", filename);
+		return 0;
+	}
+	return 1;
 }
 
 redisContext *redis_connect()
@@ -326,7 +342,6 @@ int get_task_key(char *content, char *key_buff, size_t key_size)
 	return RET_OK;
 }
 
-
 TASKSET *create_taskset(char *name)
 {
 	TASKSET *tasks;
@@ -347,7 +362,6 @@ TASKSET *create_taskset(char *name)
 	tasks->redis = (void *) redis_connect();
 	return tasks;
 }
-
 
 int get_task_value(TASKSET * tasks, char *key, TASK * task)
 {
@@ -402,6 +416,66 @@ int set_task_state(TASKSET * tasks, char *key, float progress)
 	return ret;
 }
 
+// timeout is ms
+int wait_task_done(TASKSET * tasks, char *key, int timeout, TASK_DONE_CALLBACK callback)
+{
+	TASK task;
+	int ret, f_argc;
+	char *f_argv[32], f_buffer[TASK_CONTENT_MAX_LEN];
+	char *output_file;
+
+	fd_set rfds;
+	struct timeval tv;
+	int fd, wd, nready;
+
+	if (callback == NULL) {
+		syslog_error("Please set call back in wait_task_done()");
+		return RET_ERROR;
+	}
+
+	if ((ret = get_task_value(tasks, key, &task)) != RET_ERROR) {
+		syslog_error("Task '%s.%s' not exist.", tasks->name, key);
+		return RET_ERROR;
+	}
+
+	snprintf(f_buffer, sizeof(f_buffer), "%s", task.content);
+	f_argc = fargs_parse(f_buffer, ARRAY_SIZE(f_argv), f_argv);
+	output_file = fargs_search("output_file", f_argc, f_argv);
+	if (!output_file) {
+		syslog_error("Task miss output file parameters.");
+		return RET_ERROR;
+	}
+	// monitor output file
+	ret = RET_ERROR;
+
+	fd = inotify_init();
+	if (fd < 0) {
+		syslog_error("inotify_init");
+		return RET_ERROR;
+	}
+	wd = inotify_add_watch(fd, output_file, IN_CLOSE_WRITE);
+	if (wd >= 0) {
+		FD_ZERO(&rfds);
+		FD_SET(fd, &rfds);
+		tv.tv_sec = timeout / 1000;
+		tv.tv_usec = (timeout % 1000) * 1000;
+		nready = select(fd + 1, &rfds, NULL, NULL, &tv);
+		if (nready == -1) {
+			syslog_error("select");
+		} else if (nready == 0) {
+			;					// timeout;
+		} else {
+			// now output file is created
+			ret = RET_OK;
+			callback(key, output_file);
+		}
+		inotify_rm_watch(fd, wd);
+	}
+	close(fd);
+
+	return ret;
+}
+
 int get_queue_len(TASKSET * tasks)
 {
 	int ret;
@@ -430,7 +504,6 @@ int get_first_qkey(TASKSET * tasks, char *key_buff, size_t key_size)
 
 	return ret;
 }
-
 
 int get_queue_task(TASKSET * tasks, char *pattern, TASK * task)
 {
@@ -479,18 +552,22 @@ int get_queue_task(TASKSET * tasks, char *pattern, TASK * task)
 
 int set_queue_task(TASKSET * tasks, char *content)
 {
-	TASKID id;
 	TASK task;
 	int ret;
-	char key[256], *string;
+	char key[256], *string, *id;
 	redisReply *reply;
 
 	if (get_task_key(content, key, sizeof(key)) != RET_OK)
 		return RET_ERROR;
 
-	get_task_id(content, id);
+	id = strchr(key, '.');
+	if (id == NULL) {
+		syslog_error("It is impossible, please check program logic !!!");
+		return RET_ERROR;
+	}
+	id++;						// skip '.'
 
-	memset(&task, 0, sizeof(TASK));
+	memset(&task, 0, sizeof(TASK));	// must init
 	memcpy(task.id, id, sizeof(TASKID));
 	memcpy(task.content, content, strlen(content));
 	// set default
