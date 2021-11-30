@@ -20,75 +20,75 @@ from nc import nc_id, function_parse, NCClient, NCServer
 class VideoClient(NCClient):
     """Video client SDK"""
 
-    def clean(self, infile, noise_level, outfile):
+    def clean(self, input_file, noise_level, output_file):
         f_message = (
-            f"clean(infile={infile}, noise_level={noise_level}, outfile={outfile})"
+            f"clean(input_file={input_file}, noise_level={noise_level}, output_file={output_file})"
         )
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def color(self, infile, color_picture, outfile):
+    def color(self, input_file, color_picture, output_file):
         f_message = (
-            f"color(infile={infile}, color_picture={color_picture}, outfile={outfile})"
+            f"color(input_file={input_file}, color_picture={color_picture}, output_file={output_file})"
         )
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def light(self, infile, outfile):
-        f_message = f"light(infile={infile}, outfile={outfile})"
+    def light(self, input_file, output_file):
+        f_message = f"light(input_file={input_file}, output_file={output_file})"
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def smooth(self, infile, outfile):
-        f_message = f"smooth(infile={infile}, outfile={outfile})"
+    def smooth(self, input_file, output_file):
+        f_message = f"smooth(input_file={input_file}, output_file={output_file})"
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def smask(self, infile, nframe, r, c, h, w, outfile):
-        f_message = f"smask(infile={infile}, nframe={nframe}, r={r}, c={c}, h={h}, w={w}, outfile={outfile})"
+    def smask(self, input_file, nframe, r, c, h, w, output_file):
+        f_message = f"smask(input_file={input_file}, nframe={nframe}, r={r}, c={c}, h={h}, w={w}, output_file={output_file})"
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def pmask(self, infile, outfile):
-        f_message = f"pmask(infile={infile}, outfile={outfile})"
+    def pmask(self, input_file, output_file):
+        f_message = f"pmask(input_file={input_file}, output_file={output_file})"
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def patch(self, infile, outfile):
-        f_message = f"patch(infile={infile}, outfile={outfile})"
+    def patch(self, input_file, output_file):
+        f_message = f"patch(input_file={input_file}, output_file={output_file})"
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def zoom(self, infile, zoom_x, outfile):
-        f_message = f"zoom(infile={infile}, zoom_x={zoom_x}, outfile={outfile})"
+    def zoom(self, input_file, zoom_times, output_file):
+        f_message = f"zoom(input_file={input_file}, zoom_times={zoom_times}, output_file={output_file})"
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def slow(self, infile, slow_x, outfile):
-        f_message = f"slow(infile={infile}, slow_x={slow_x}, outfile={outfile})"
+    def slow(self, input_file, slow_times, output_file):
+        f_message = f"slow(input_file={input_file}, slow_times={slow_times}, output_file={output_file})"
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def face(self, infile, face_picture, outfile):
+    def face(self, input_file, face_picture, output_file):
         f_message = (
-            f"face(infile={infile}, face_picture={face_picture}, outfile={outfile})"
+            f"face(input_file={input_file}, face_picture={face_picture}, output_file={output_file})"
         )
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."
         return self.put(f_message)
 
-    def body(self, infile, body_picture, outfile):
+    def body(self, input_file, body_picture, output_file):
         f_message = (
-            f"body(infile={infile}, body_picture={body_picture}, outfile={outfile})"
+            f"body(input_file={input_file}, body_picture={body_picture}, output_file={output_file})"
         )
         f_name, f_args = function_parse(f_message)
         assert f_name != "", f"{f_message} is not valid function."

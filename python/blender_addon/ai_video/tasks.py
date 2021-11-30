@@ -298,8 +298,8 @@ class RedisTasks(object):
 
 if __name__ == "__main__":
     video = RedisTasks("video")
-    # video.set_queue_task("color(infile=a.mp4,color_picture=color.png,outfile=o.mp4)")
-    # video.set_queue_task("clean(infile=clean_input.mp4,sigma=30,outfile=clean_output.mp4)")
+    # video.set_queue_task("color(input_file=a.mp4,color_picture=color.png,output_file=o.mp4)")
+    # video.set_queue_task("clean(input_file=clean_input.mp4,sigma=30,output_file=clean_output.mp4)")
 
     # print(video)
     image = RedisTasks("image")

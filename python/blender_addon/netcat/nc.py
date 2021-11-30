@@ -37,8 +37,8 @@ def nc_id(value):
 def function_parse(s):
     """
     example:
-        f_name, f_args = function_parse("clean(infile=xxxx, outfile=yyyy)")
-        # f_name, f_args -- clean', {'infile': 'xxxx', 'outfile': 'yyyy'}
+        f_name, f_args = function_parse("clean(input_file=xxxx, output_file=yyyy)")
+        # f_name, f_args -- clean', {'input_file': 'xxxx', 'output_file': 'yyyy'}
     """
     import re
 

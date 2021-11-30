@@ -16,8 +16,8 @@ import re
 def function_parse(s):
     """
     example:
-        f_name, f_args = function_parse("clean(infile=xxxx, outfile=yyyy)")
-        # f_name, f_args -- clean', {'infile': 'xxxx', 'outfile': 'yyyy'}
+        f_name, f_args = function_parse("clean(input_file=xxxx, output_file=yyyy)")
+        # f_name, f_args -- clean', {'input_file': 'xxxx', 'output_file': 'yyyy'}
     """
     f_name = ""
     f_args = {}
@@ -41,85 +41,85 @@ class VideoCommand(object):
     """
 
     @classmethod
-    def clean(cls, infile, noise_level, outfile):
+    def clean(cls, input_file, noise_level, output_file):
         f_command = (
-            f"clean(infile={infile}, noise_level={noise_level}, outfile={outfile})"
+            f"clean(input_file={input_file}, noise_level={noise_level}, output_file={output_file})"
         )
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def color(cls, infile, color_picture, outfile):
+    def color(cls, input_file, color_picture, output_file):
         f_command = (
-            f"color(infile={infile}, color_picture={color_picture}, outfile={outfile})"
+            f"color(input_file={input_file}, color_picture={color_picture}, output_file={output_file})"
         )
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def light(cls, infile, outfile):
-        f_command = f"light(infile={infile}, outfile={outfile})"
+    def light(cls, input_file, output_file):
+        f_command = f"light(input_file={input_file}, output_file={output_file})"
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def smooth(cls, infile, outfile):
-        f_command = f"smooth(infile={infile}, outfile={outfile})"
+    def smooth(cls, input_file, output_file):
+        f_command = f"smooth(input_file={input_file}, output_file={output_file})"
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def smask(cls, infile, nframe, x1, x2, y1, y2, outfile):
-        f_command = f"smask(infile={infile}, nframe={nframe}, x1={x1}, x2={x2}, y1={y1}, y2={y2}, outfile={outfile})"
+    def smask(cls, input_file, nframe, x1, x2, y1, y2, output_file):
+        f_command = f"smask(input_file={input_file}, nframe={nframe}, x1={x1}, x2={x2}, y1={y1}, y2={y2}, output_file={output_file})"
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def pmask(cls, infile, outfile):
-        f_command = f"pmask(infile={infile}, outfile={outfile})"
+    def pmask(cls, input_file, output_file):
+        f_command = f"pmask(input_file={input_file}, output_file={output_file})"
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def patch(cls, infile, outfile):
-        f_command = f"patch(infile={infile}, outfile={outfile})"
+    def patch(cls, input_file, output_file):
+        f_command = f"patch(input_file={input_file}, output_file={output_file})"
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def zoom(cls, infile, outfile):
-        f_command = f"zoom(infile={infile}, outfile={outfile})"
+    def zoom(cls, input_file, output_file):
+        f_command = f"zoom(input_file={input_file}, output_file={output_file})"
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def slow(cls, infile, slow_x, outfile):
-        f_command = f"slow(infile={infile}, slow_x={slow_x}, outfile={outfile})"
+    def slow(cls, input_file, slow_times, output_file):
+        f_command = f"slow(input_file={input_file}, slow_times={slow_times}, output_file={output_file})"
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def face(cls, infile, face_picture, outfile):
+    def face(cls, input_file, face_picture, output_file):
         f_command = (
-            f"face(infile={infile}, face_picture={face_picture}, outfile={outfile})"
+            f"face(input_file={input_file}, face_picture={face_picture}, output_file={output_file})"
         )
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."
         return f_command
 
     @classmethod
-    def pose(cls, infile, pose_picture, outfile):
+    def pose(cls, input_file, pose_picture, output_file):
         f_command = (
-            f"pose(infile={infile}, pose_picture={pose_picture}, outfile={outfile})"
+            f"pose(input_file={input_file}, pose_picture={pose_picture}, output_file={output_file})"
         )
         f_name, f_args = function_parse(f_command)
         assert f_name != "", f"{f_command} is not valid function."

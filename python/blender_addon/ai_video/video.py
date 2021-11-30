@@ -165,38 +165,38 @@ def test_video_reader():
 class VideoClient(NCClient):
     """Video client SDK"""
 
-    def clean(self, infile, noise_level, outfile):
-        self.put(VideoCommand.clean(infile, noise_level, outfile))
+    def clean(self, input_file, noise_level, output_file):
+        self.put(VideoCommand.clean(input_file, noise_level, output_file))
 
-    def color(self, infile, color_picture, outfile):
-        self.put(VideoCommand.color(infile, color_picture, outfile))
+    def color(self, input_file, color_picture, output_file):
+        self.put(VideoCommand.color(input_file, color_picture, output_file))
 
-    def light(self, infile, outfile):
-        self.put(VideoCommand.light(infile, outfile))
+    def light(self, input_file, output_file):
+        self.put(VideoCommand.light(input_file, output_file))
 
-    def smooth(self, infile, outfile):
-        return self.put(VideoCommand.smooth(infile, outfile))
+    def smooth(self, input_file, output_file):
+        return self.put(VideoCommand.smooth(input_file, output_file))
 
-    def smask(self, infile, nframe, x1, x2, y1, y2, outfile):
-        return self.put(VideoCommand.smask(infile, nframe, x1, x2, y1, y2, outfile))
+    def smask(self, input_file, nframe, x1, x2, y1, y2, output_file):
+        return self.put(VideoCommand.smask(input_file, nframe, x1, x2, y1, y2, output_file))
 
-    def pmask(self, infile, outfile):
-        return self.put(VideoCommand.pmask(infile, outfile))
+    def pmask(self, input_file, output_file):
+        return self.put(VideoCommand.pmask(input_file, output_file))
 
-    def patch(self, infile, outfile):
-        return self.put(VideoCommand.patch(infile, outfile))
+    def patch(self, input_file, output_file):
+        return self.put(VideoCommand.patch(input_file, output_file))
 
-    def zoom(self, infile, outfile):
-        return self.put(VideoCommand.zoom(infile, outfile))
+    def zoom(self, input_file, output_file):
+        return self.put(VideoCommand.zoom(input_file, output_file))
 
-    def slow(self, infile, slow_x, outfile):
-        return self.put(VideoCommand.slow(infile, slow_x, outfile))
+    def slow(self, input_file, slow_times, output_file):
+        return self.put(VideoCommand.slow(input_file, slow_times, output_file))
 
-    def face(self, infile, face_picture, outfile):
-        return self.put(VideoCommand.face(infile, face_picture, outfile))
+    def face(self, input_file, face_picture, output_file):
+        return self.put(VideoCommand.face(input_file, face_picture, output_file))
 
-    def pose(self, infile, pose_picture, outfile):
-        return self.put(VideoCommand.pose(infile, pose_picture, outfile))
+    def pose(self, input_file, pose_picture, output_file):
+        return self.put(VideoCommand.pose(input_file, pose_picture, output_file))
 
 
 class VideoServer(NCServer):
