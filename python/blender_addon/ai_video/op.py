@@ -127,7 +127,7 @@ def active_bbox():
                     continue
                 # box = [frame_number, x1, x2, y1, y2]
                 return {
-                    "nframe": f.frame_number,
+                    "frame": f.frame_number,
                     "x1": min(xset),
                     "x2": max(xset),
                     "y1": min(yset),
@@ -333,7 +333,7 @@ class AI_Video_OT_SMask(AIVideoOperator):
 
         cmd = app.VideoCommand.smask(
             a.filepath,
-            bbox["nframe"],
+            bbox["frame"],
             bbox["x1"],
             bbox["x2"],
             bbox["y1"],

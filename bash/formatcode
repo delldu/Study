@@ -1,0 +1,53 @@
+#/************************************************************************************
+#***
+#***	Copyright 2022 Dell(18588220928@163.com), All Rights Reserved.
+#***
+#***	File Author: Dell, 2022年 06月 21日 星期二 15:40:16 CST
+#***
+#************************************************************************************/
+#
+#! /bin/sh
+
+usage()
+{
+	echo "Usage: $0 [options] input-files"
+	echo "Format source code with clang-format-10"
+	echo "Options:"
+	echo "    check *.[h|c|cpp|cc|cu|cuh]"
+	echo "           Check source code"
+	echo "    preview *.[h|c|cpp|cc|cu|cuh]"
+	echo "           Preview formated source code"
+	echo "    format *.[h|c|cpp|cc|cu|cuh]"
+	echo "           Format source code"
+
+	exit 1
+}
+
+FORMAT_STYLE="{BasedOnStyle: WebKit, SortIncludes: false, TabWidth: 4, ColumnLimit: 108}"
+
+check()
+{
+	[ "$1" == "" ] && usage
+
+	clang-format-10 -style="$FORMAT_STYLE" --dry-run --Werror $1
+}
+
+preview()
+{
+	[ "$1" == "" ] && usage
+	clang-format-10 -style="$FORMAT_STYLE" $1
+}
+
+
+format()
+{
+	[ "$1" == "" ] && usage
+	clang-format-10 -style="$FORMAT_STYLE" -i $1
+}
+
+if [ "$*" == "" ] ;
+then
+	usage
+else
+	eval "$*"
+fi

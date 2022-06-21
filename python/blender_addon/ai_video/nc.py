@@ -23,8 +23,6 @@ import socketserver
 import threading
 import multiprocessing
 
-# import pdb
-
 
 def nc_id(value):
     """

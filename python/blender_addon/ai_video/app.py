@@ -134,7 +134,7 @@ class VideoStrips(object):
 
     def put(self, name, id):
         self.data[name] = id
-        print("video Todo List:", self.data)
+        print("Video Todo List:", self.data)
 
     def get(self, name):
         return self.data.get(name, None)

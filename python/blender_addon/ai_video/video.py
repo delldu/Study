@@ -93,6 +93,7 @@ class VideoReader(object):
         start_pos = int(self.fps * start_time + 0.0001)
 
         # rgba format
+        # ffmpeg -i %s -f image2pipe -vcodec rawvideo -pix_fmt rgba - 2>/dev/null
         buffer_size = self.height * self.width * 4
         cmd = [
             "ffmpeg",
